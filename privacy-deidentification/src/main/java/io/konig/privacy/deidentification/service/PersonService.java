@@ -1,27 +1,39 @@
-package io.konig.privacy.personal.model;
+package io.konig.privacy.deidentification.service;
 
 import java.io.IOException;
 import java.io.PrintWriter;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import io.konig.privacy.deidentification.model.PersonKeys;
+import io.konig.privacy.deidentification.model.PersonWithMetadata;
 
-public interface PersonalInformationService {
+/**
+ * A service that provides access to personally identifiable information and which generates 
+ * pseudonyms.
+ * 
+ * @author Greg McFall
+ *
+ */
+public interface PersonService {
 	
 	
 	
 	/**
 	 * Post the personal information for a given individual.  
-	 * If a record for the individual exists, this 
-	 * @param personalInformation
-	 * @return
+	 * This method merges the supplied description of the Person with any prior information that might have 
+	 * been posted earlier.
+	 * 
+	 * @param person  A JSON description of the person decorated with metadata.  The JSON description must include
+	 * at least one key for the person.
+	 * 
+	 * @return The pseudonym assigned to the person.  If no pseudonym was previously assigned, one will be generated.
 	 */
-	String post(JsonNode personalInformation);
+	String post(PersonWithMetadata person);
 	
 	/**
 	 * Stream a JSON representation of the Personal Information for a specific individual.
 	 * 
 	 * This method emits to a writer the same information that is returned by
-	 * {@link PersonalInformationService#getPersonalInformation(PersonKeys) getPersonalInformation}.
+	 * {@link PersonService#getPersonalInformation(PersonKeys) getPersonalInformation}.
 	 * 
 	 * @param keys  The set of known keys for the individual.
 	 * @param writer A writer into which the Personal Information in JSON format will be emitted.

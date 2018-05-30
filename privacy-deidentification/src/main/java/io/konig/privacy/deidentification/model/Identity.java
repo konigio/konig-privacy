@@ -1,4 +1,4 @@
-package io.konig.privacy.personal.model;
+package io.konig.privacy.deidentification.model;
 
 /**
  * An object that encapsulates the identifier for a specific Person within the context of a given Identity Provider.

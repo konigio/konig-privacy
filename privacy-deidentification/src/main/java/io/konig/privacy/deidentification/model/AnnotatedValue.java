@@ -1,4 +1,4 @@
-package io.konig.privacy.personal.model;
+package io.konig.privacy.deidentification.model;
 
 public class AnnotatedValue extends Provenance implements AnnotatedEntity {
 

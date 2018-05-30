@@ -1,4 +1,4 @@
-package io.konig.privacy.personal.model;
+package io.konig.privacy.deidentification.model;
 
 /**
  * An object that encapsulates a String value plus the language in which that value is expressed.
