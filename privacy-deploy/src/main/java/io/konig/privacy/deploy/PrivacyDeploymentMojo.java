@@ -22,8 +22,18 @@ import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import io.konig.privacy.cloud.CreateCloudFormationStack;
+import com.amazonaws.AmazonClientException;
+import com.amazonaws.AmazonServiceException;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.services.cloudformation.AmazonCloudFormation;
+import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
+import com.amazonaws.services.cloudformation.model.CreateStackRequest;
+
+import io.konig.privacy.cloudformation.CloudFormationActionStack;
 
 /**
  * Goal which touches a timestamp file.
@@ -34,6 +44,7 @@ import io.konig.privacy.cloud.CreateCloudFormationStack;
 public class PrivacyDeploymentMojo
     extends AbstractMojo
 {
+	private final Logger slf4jLogger = LoggerFactory.getLogger(PrivacyDeploymentMojo.class);
     /**
      * Location of the file.
      */    
@@ -45,13 +56,61 @@ public class PrivacyDeploymentMojo
     public void execute()
         throws MojoExecutionException
     {
-    	CreateCloudFormationStack cloudFormationStack=new CreateCloudFormationStack();
+    	CloudFormationActionStack cloudFormationActionStack =new CloudFormationActionStack();
+    	String strResult=cloudFormationActionStack.CreateTemplateForAWSDeployment(privacyConfiguration);
     	try {
-			cloudFormationStack.createAmazonCloudFormationStack(privacyConfiguration);
-		} catch (Exception e) {
+			AmazonCloudFormation stackbuilder = AmazonCloudFormationClientBuilder.standard()
+			.withCredentials(getCredential())
+			.withRegion(System.getProperty("aws.region"))
+			.build();
+		} catch (Exception e1) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			e1.printStackTrace();
 		}
+    	slf4jLogger.info("===========================================");
+		slf4jLogger.info("Getting Started with AWS CloudFormation");
+		slf4jLogger.info("===========================================\n");
+        String stackName           = "CloudFormationPrivacyStack";
+        try {
+            // Create a stack
+            CreateStackRequest createRequest = new CreateStackRequest();
+            createRequest.setStackName(stackName);
+            try {
+				createRequest.setTemplateBody(strResult);
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+            slf4jLogger.info("Creating a stack called "+ createRequest.getStackName());
+            //stackbuilder.createStack(createRequest);
+
+            // Wait for stack to be created
+            // Note that you could use SNS notifications on the CreateStack call to track the progress of the stack creation
+            slf4jLogger.info("Stack creation completed, the stack "+ stackName + " completed ");
+	
+	} catch (AmazonServiceException ase) {
+		slf4jLogger.error("Caught an AmazonServiceException, which means your request made it ");
+		slf4jLogger.error("to AWS CloudFormation, but was rejected with an error response for some reason.");
+		slf4jLogger.error("Error Message:    " + ase.getMessage());        
+		slf4jLogger.error("HTTP Status Code: " + ase.getStatusCode()); 
+		slf4jLogger.error("AWS Error Code:   " + ase.getErrorCode()); 
+		slf4jLogger.error("Error Type:       " + ase.getErrorType());
+		slf4jLogger.error("Request ID:       " + ase.getRequestId());        
+    } catch (AmazonClientException ace) {
+			slf4jLogger.error(
+					"Caught an AmazonServiceException, which means the client encountered a serious internal problem while trying to communicate with AWS CloudFormation");
+			slf4jLogger.error("Error Message: " + ace.getMessage());        
+    }
+    	
     	
     }
+    public static AWSStaticCredentialsProvider getCredential() throws Exception {
+		String accessKeyId = System.getProperty("aws.accessKeyId");
+		String secretKey = System.getProperty("aws.secretKey");
+		if (accessKeyId == null || secretKey == null)
+			throw new Exception();
+		return new AWSStaticCredentialsProvider(
+				new BasicAWSCredentials(System.getProperty("aws.accessKeyId"), System.getProperty("aws.secretKey")));
+
+	}
 }

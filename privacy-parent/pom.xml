@@ -10,5 +10,6 @@
 	</properties>
 	<modules>
 		<module>../privacy-deploy</module>
+		<module>../privacy-fileinjection</module>
 	</modules>
 </project>
