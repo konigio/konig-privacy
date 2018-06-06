@@ -1,6 +1,7 @@
 package io.konig.privacy.injection;
 
 import java.io.File;
+import java.io.IOException;
 
 /*
  * Copyright 2001-2005 The Apache Software Foundation.
@@ -29,22 +30,32 @@ import io.konig.privacy.cloudformation.CloudFormationActionStack;
 
 /**
  * Goal which touches a timestamp file.
- *
  */
-@Mojo( name = "generate", defaultPhase = LifecyclePhase.GENERATE_SOURCES )
+@Mojo( name = "inject", defaultPhase = LifecyclePhase.GENERATE_SOURCES )
 public class PrivacyInjectionMojo
     extends AbstractMojo
 {
     /**
      * Location of the file.
      */
-	@Parameter(defaultValue = "${privacy.properties}", required = true)
-    private File privacyConfiguration;
+
+    @Parameter(property="konig.privacy.deployment.configFile", required = true)
+    private File configFile;
+    
+    @Parameter(property="konig.privacy.deployment.velocityTemplate", required = true)
+    private File velocityTemplate;
+    
+    @Parameter(property="konig.privacy.deployment.cloudformationFile", defaultValue="target/deploy/aws/cloudformation.yaml")
+    private File cloudformationFile;
 
     public void execute()
         throws MojoExecutionException
     {
     	CloudFormationActionStack cloudFormationActionStack =new CloudFormationActionStack();
-    	String strResult=cloudFormationActionStack.CreateTemplateForAWSDeployment(privacyConfiguration);
+    	try {
+			cloudFormationActionStack.createTemplateForAWSDeployment(configFile, velocityTemplate, cloudformationFile);
+		} catch (IOException e) {
+			throw new MojoExecutionException("Failed to inject configuration", e);
+		}
     }
 }

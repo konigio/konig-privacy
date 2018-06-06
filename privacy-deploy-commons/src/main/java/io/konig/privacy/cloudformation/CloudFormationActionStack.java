@@ -2,13 +2,10 @@ package io.konig.privacy.cloudformation;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.StringWriter;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Properties;
-import java.util.regex.Matcher;
 
 import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
@@ -42,19 +39,13 @@ public class CloudFormationActionStack
 		} 
 	}
 	
-	public String CreateTemplateForAWSDeployment(File file){
-		String strResult=null;
+	public void createTemplateForAWSDeployment(File configFile, File velocityTemplate, File outFile) throws IOException {
 		Properties properties=System.getProperties();
-		StringWriter result = new StringWriter();
-		intialize(file);
-		VelocityEngine engine = new VelocityEngine(properties);
+		intialize(configFile);
+		VelocityEngine engine = velocityEngine(velocityTemplate);
 	
-		String path= System.getProperty("user.dir");
-		Path rs = Paths.get(path);
-		path.replaceAll("\\\\","/");
-		//TODO - get the cloudformation.yml from privacy-deploy/src/aws path
-		path = path+"/privacy-deploy/src/aws/cloudformation.yml";
-		Template template = engine.getTemplate(path, "UTF-8");
+		
+		Template template = engine.getTemplate(velocityTemplate.getName(), "UTF-8");
 		VelocityContext context=new VelocityContext();
 		context.put("beginVar", "${");
 		context.put("endVar", "}");
@@ -62,9 +53,22 @@ public class CloudFormationActionStack
 			String k=(String)key;
 			context.put(k, properties.getProperty(k));
 		}
-		template.merge(context, result);
-		strResult=result.toString();
-		return strResult;
+		File parentDir = outFile.getParentFile();
+		parentDir.mkdirs();
+		
+		try (FileWriter writer = new FileWriter(outFile)) {
+
+			template.merge(context, writer);
+		}
+		
+	}
+
+	private VelocityEngine velocityEngine(File velocityTemplate) {
+		String templateDir = velocityTemplate.getParentFile().getAbsolutePath();
+		Properties properties = new Properties();
+		properties.put("resource.loader", "file");
+		properties.put("file.resource.loader.path", templateDir);
+		return new VelocityEngine(properties);
 	}
    
 }

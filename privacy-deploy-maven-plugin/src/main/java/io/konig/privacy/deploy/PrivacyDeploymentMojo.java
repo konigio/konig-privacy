@@ -1,6 +1,9 @@
 package io.konig.privacy.deploy;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 
 /*
  * Copyright 2001-2005 The Apache Software Foundation.
@@ -29,11 +32,7 @@ import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.services.cloudformation.AmazonCloudFormation;
-import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
 import com.amazonaws.services.cloudformation.model.CreateStackRequest;
-
-import io.konig.privacy.cloudformation.CloudFormationActionStack;
 
 /**
  * Goal which touches a timestamp file.
@@ -45,28 +44,15 @@ public class PrivacyDeploymentMojo
     extends AbstractMojo
 {
 	private final Logger slf4jLogger = LoggerFactory.getLogger(PrivacyDeploymentMojo.class);
-    /**
-     * Location of the file.
-     */    
-	/**
-     * The privacy configuration property file.
-     */
-    @Parameter(defaultValue = "${privacy.properties}", required = true)
-    private File privacyConfiguration;
+   
+    
+    @Parameter(property="konig.privacy.deployment.cloudformationFile", defaultValue="target/deploy/aws/cloudformation.yaml")
+    private File cloudformationFile;
+    
     public void execute()
         throws MojoExecutionException
     {
-    	CloudFormationActionStack cloudFormationActionStack =new CloudFormationActionStack();
-    	String strResult=cloudFormationActionStack.CreateTemplateForAWSDeployment(privacyConfiguration);
-    	try {
-			AmazonCloudFormation stackbuilder = AmazonCloudFormationClientBuilder.standard()
-			.withCredentials(getCredential())
-			.withRegion(System.getProperty("aws.region"))
-			.build();
-		} catch (Exception e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
+    	
     	slf4jLogger.info("===========================================");
 		slf4jLogger.info("Getting Started with AWS CloudFormation");
 		slf4jLogger.info("===========================================\n");
@@ -76,7 +62,8 @@ public class PrivacyDeploymentMojo
             CreateStackRequest createRequest = new CreateStackRequest();
             createRequest.setStackName(stackName);
             try {
-				createRequest.setTemplateBody(strResult);
+            	String templateText = readText(cloudformationFile);
+				createRequest.setTemplateBody(templateText);
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -104,7 +91,10 @@ public class PrivacyDeploymentMojo
     	
     	
     }
-    public static AWSStaticCredentialsProvider getCredential() throws Exception {
+    private String readText(File file) throws IOException {
+    	return new String(Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8);
+	}
+	public static AWSStaticCredentialsProvider getCredential() throws Exception {
 		String accessKeyId = System.getProperty("aws.accessKeyId");
 		String secretKey = System.getProperty("aws.secretKey");
 		if (accessKeyId == null || secretKey == null)
