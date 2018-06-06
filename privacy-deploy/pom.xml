@@ -29,7 +29,7 @@
  				<configuration>
  					<configFile>${project.basedir}/src/config/dev-config.properties</configFile>
  					<velocityTemplate>${project.basedir}/src/aws/cloudformation.yaml</velocityTemplate>
- 					<cloudformationFile>${project.basedir}/target/deploy/aws/cloudformation.yaml</cloudformationFile>
+ 					<cloudformationFile>${project.basedir}/target/deploy/aws/cloudformation.yaml</cloudformationFile> 					
  				</configuration>
  				<executions>
  					<execution>
@@ -87,7 +87,7 @@
     					</pluginExecutions>
     				</lifecycleMappingMetadata>
     			</configuration>
-    		</plugin>
+    		</plugin>    		         		
     	</plugins>
     </pluginManagement>
   </build>

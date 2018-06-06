@@ -57,7 +57,7 @@
 				<version>3.2</version>
 				<configuration>
 					<goalPrefix>install</goalPrefix>
-					<skipErrorNoDescriptorsFound>true</skipErrorNoDescriptorsFound>
+					<skipErrorNoDescriptorsFound>true</skipErrorNoDescriptorsFound>						
 				</configuration>
         <executions>
           <execution>            

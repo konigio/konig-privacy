@@ -32,6 +32,8 @@ import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.services.cloudformation.AmazonCloudFormation;
+import com.amazonaws.services.cloudformation.AmazonCloudFormationClientBuilder;
 import com.amazonaws.services.cloudformation.model.CreateStackRequest;
 
 /**
@@ -46,17 +48,26 @@ public class PrivacyDeploymentMojo
 	private final Logger slf4jLogger = LoggerFactory.getLogger(PrivacyDeploymentMojo.class);
    
     
-    @Parameter(property="konig.privacy.deployment.cloudformationFile", defaultValue="target/deploy/aws/cloudformation.yaml")
+    @Parameter(property="konig.privacy.deployment.cloudformationFile", defaultValue="${project.basedir}/target/deploy/aws/cloudformation.yaml")
     private File cloudformationFile;
     
     public void execute()
         throws MojoExecutionException
     {
-    	
+    	System.out.println("SL4J Logger--->"+cloudformationFile);
     	slf4jLogger.info("===========================================");
 		slf4jLogger.info("Getting Started with AWS CloudFormation");
 		slf4jLogger.info("===========================================\n");
         String stackName           = "CloudFormationPrivacyStack";
+        /*try {
+			AmazonCloudFormation stackbuilder = AmazonCloudFormationClientBuilder.standard()
+			        .withCredentials(getCredential())
+			        .withRegion(System.getProperty("aws.region"))
+			        .build();
+		} catch (Exception e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}*/
         try {
             // Create a stack
             CreateStackRequest createRequest = new CreateStackRequest();

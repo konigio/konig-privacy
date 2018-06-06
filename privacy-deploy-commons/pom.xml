@@ -5,7 +5,7 @@
 		<groupId>io.konig</groupId>
 		<artifactId>privacy-parent</artifactId>
 		<version>1.0.0-SNAPSHOT</version>
-		<relativePath>../konig-parent/pom.xml</relativePath>
+		<relativePath>../privacy-parent/pom.xml</relativePath>
 	</parent>
 	<artifactId>privacy-deploy-commons</artifactId>
 

@@ -1,0 +1,1152 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  A stack for deploying containerized applications in AWS Fargate. This stack
+  runs containers in a public VPC subnet, and includes a public facing load
+  balancer to register the services in.
+Parameters:
+  StackName:
+    Type: String
+    Default: test-privacy-service
+    Description: >-
+      The name of the parent Fargate networking stack that you created.
+      Necessary to locate and reference resources created by that stack.
+  ServiceName:
+    Type: String
+    Default: nginx
+    Description: A name for the service
+  Path:
+    Type: String
+    Default: '*'
+    Description: >-
+      A path on the public load balancer that this service should be connected
+      to. Use * to send all load balancer traffic to this service.
+  DesiredCount:
+    Type: Number
+    Default: 1
+    Description: How many copies of the service task to run
+  ContainerPort:
+    Type: Number
+    Default: 80
+    Description: What port number the application inside the docker container is binding to
+  ContainerCpu:
+    Type: Number
+    Default: 512
+    Description: How much CPU to give the container. 1024 is 1 CPU
+  ContainerMemory:
+    Type: Number
+    Default: 1024
+    Description: How much memory in megabytes to give the container
+  Role:
+    Type: String
+    Default: ''
+    Description: >-
+      (Optional) An IAM role to give the service's containers if the code within
+      needs to access other AWS resources like S3 buckets, DynamoDB tables, etc
+Mappings:
+  SubnetConfig:
+    VPC:
+      CIDR: 10.0.0.0/16
+    PublicOne:
+      CIDR: 10.0.0.0/24
+    PublicTwo:
+      CIDR: 10.0.1.0/24
+Resources:
+  VPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      CidrBlock: !FindInMap 
+        - SubnetConfig
+        - VPC
+        - CIDR
+      Tags:
+      - Key: Name
+        Value: !Join 
+        - ''
+        - - !Ref 'AWS::StackName'
+          - ' resource'
+      - Key: "t_cost_centre"
+        Value: "foo"
+      - Key: "t_name"
+        Value: "${t_name}"
+      - Key: "t_owner_individual"
+        Value: "${t_owner_individual}"
+      - Key: "t_responsible_individuals"
+        Value: "Alan Turing"
+      - Key: "t_environment"
+        Value: "development"
+      - Key: "t_awscon"
+        Value: "${t_awscon}"
+      - Key: "t_role"
+        Value: "${t_role}"
+      - Key: "t_AppID"
+        Value: "${t_AppID}"
+      - Key: "t_shut"
+        Value: "${t_shut}"
+      - Key: "t_pillar"
+        Value: "${t_pillar}"
+      - Key: "t_cmdb"
+        Value: "${t_cmdb}"
+      - Key: "t_dcl"
+        Value: "${t_dcl}"
+  PublicSubnetOne:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      AvailabilityZone: !Select 
+        - 0
+        - !GetAZs 
+          Ref: 'AWS::Region'
+      VpcId: !Ref VPC
+      CidrBlock: !FindInMap 
+        - SubnetConfig
+        - PublicOne
+        - CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+      - Key: "t_cost_centre"
+        Value: "3651091"
+      - Key: "t_name"
+        Value: "sofa"
+      - Key: "t_owner_individual"
+        Value: "Vikram Medishetty"
+      - Key: "t_responsible_individuals"
+        Value: "Sofaops@pearson.com"
+      - Key: "t_environment"
+        Value: "Development"
+      - Key: "t_awscon"
+        Value: "Development"
+      - Key: "t_role"
+        Value: "sofa"
+      - Key: "t_AppID"
+        Value: "SVC01754"
+      - Key: "t_shut"
+        Value: "No"
+      - Key: "t_pillar"
+        Value: "Foundation"
+      - Key: "t_cmdb"
+        Value: "No"
+      - Key: "t_dcl"
+        Value: "DCL3"
+  PublicSubnetTwo:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      AvailabilityZone: !Select 
+        - 1
+        - !GetAZs 
+          Ref: 'AWS::Region'
+      VpcId: !Ref VPC
+      CidrBlock: !FindInMap 
+        - SubnetConfig
+        - PublicTwo
+        - CIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+      - Key: "t_cost_centre"
+        Value: "3651091"
+      - Key: "t_name"
+        Value: "sofa"
+      - Key: "t_owner_individual"
+        Value: "Vikram Medishetty"
+      - Key: "t_responsible_individuals"
+        Value: "Sofaops@pearson.com"
+      - Key: "t_environment"
+        Value: "Development"
+      - Key: "t_awscon"
+        Value: "Development"
+      - Key: "t_role"
+        Value: "sofa"
+      - Key: "t_AppID"
+        Value: "SVC01754"
+      - Key: "t_shut"
+        Value: "No"
+      - Key: "t_pillar"
+        Value: "Foundation"
+      - Key: "t_cmdb"
+        Value: "No"
+      - Key: "t_dcl"
+        Value: "DCL3"
+  InternetGateway:
+    Type: 'AWS::EC2::InternetGateway'
+    Properties:
+      Tags:
+      - Key: "t_cost_centre"
+        Value: "3651091"
+      - Key: "t_name"
+        Value: "sofa"
+      - Key: "t_owner_individual"
+        Value: "Vikram Medishetty"
+      - Key: "t_responsible_individuals"
+        Value: "Sofaops@pearson.com"
+      - Key: "t_environment"
+        Value: "Development"
+      - Key: "t_awscon"
+        Value: "Development"
+      - Key: "t_role"
+        Value: "sofa"
+      - Key: "t_AppID"
+        Value: "SVC01754"
+      - Key: "t_shut"
+        Value: "No"
+      - Key: "t_pillar"
+        Value: "Foundation"
+      - Key: "t_cmdb"
+        Value: "No"
+      - Key: "t_dcl"
+        Value: "DCL3"
+  GatewayAttachement:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+      Tags:
+      - Key: "t_cost_centre"
+        Value: "3651091"
+      - Key: "t_name"
+        Value: "sofa"
+      - Key: "t_owner_individual"
+        Value: "Vikram Medishetty"
+      - Key: "t_responsible_individuals"
+        Value: "Sofaops@pearson.com"
+      - Key: "t_environment"
+        Value: "Development"
+      - Key: "t_awscon"
+        Value: "Development"
+      - Key: "t_role"
+        Value: "sofa"
+      - Key: "t_AppID"
+        Value: "SVC01754"
+      - Key: "t_shut"
+        Value: "No"
+      - Key: "t_pillar"
+        Value: "Foundation"
+      - Key: "t_cmdb"
+        Value: "No"
+      - Key: "t_dcl"
+        Value: "DCL3"
+  PublicRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+      - Key: "t_cost_centre"
+        Value: "3651091"
+      - Key: "t_name"
+        Value: "sofa"
+      - Key: "t_owner_individual"
+        Value: "Vikram Medishetty"
+      - Key: "t_responsible_individuals"
+        Value: "Sofaops@pearson.com"
+      - Key: "t_environment"
+        Value: "Development"
+      - Key: "t_awscon"
+        Value: "Development"
+      - Key: "t_role"
+        Value: "sofa"
+      - Key: "t_AppID"
+        Value: "SVC01754"
+      - Key: "t_shut"
+        Value: "No"
+      - Key: "t_pillar"
+        Value: "Foundation"
+      - Key: "t_cmdb"
+        Value: "No"
+      - Key: "t_dcl"
+        Value: "DCL3"
+  PublicRoute:
+    Type: 'AWS::EC2::Route'
+    DependsOn: GatewayAttachement
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+      Tags:
+      - Key: "t_cost_centre"
+        Value: "3651091"
+      - Key: "t_name"
+        Value: "sofa"
+      - Key: "t_owner_individual"
+        Value: "Vikram Medishetty"
+      - Key: "t_responsible_individuals"
+        Value: "Sofaops@pearson.com"
+      - Key: "t_environment"
+        Value: "Development"
+      - Key: "t_awscon"
+        Value: "Development"
+      - Key: "t_role"
+        Value: "sofa"
+      - Key: "t_AppID"
+        Value: "SVC01754"
+      - Key: "t_shut"
+        Value: "No"
+      - Key: "t_pillar"
+        Value: "Foundation"
+      - Key: "t_cmdb"
+        Value: "No"
+      - Key: "t_dcl"
+        Value: "DCL3"
+  PublicSubnetOneRouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PublicSubnetOne
+      RouteTableId: !Ref PublicRouteTable
+      Tags:
+      - Key: "t_cost_centre"
+        Value: "3651091"
+      - Key: "t_name"
+        Value: "sofa"
+      - Key: "t_owner_individual"
+        Value: "Vikram Medishetty"
+      - Key: "t_responsible_individuals"
+        Value: "Sofaops@pearson.com"
+      - Key: "t_environment"
+        Value: "Development"
+      - Key: "t_awscon"
+        Value: "Development"
+      - Key: "t_role"
+        Value: "sofa"
+      - Key: "t_AppID"
+        Value: "SVC01754"
+      - Key: "t_shut"
+        Value: "No"
+      - Key: "t_pillar"
+        Value: "Foundation"
+      - Key: "t_cmdb"
+        Value: "No"
+      - Key: "t_dcl"
+        Value: "DCL3"
+  PublicSubnetTwoRouteTableAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref PublicSubnetTwo
+      RouteTableId: !Ref PublicRouteTable
+      Tags:
+      - Key: "t_cost_centre"
+        Value: "3651091"
+      - Key: "t_name"
+        Value: "sofa"
+      - Key: "t_owner_individual"
+        Value: "Vikram Medishetty"
+      - Key: "t_responsible_individuals"
+        Value: "Sofaops@pearson.com"
+      - Key: "t_environment"
+        Value: "Development"
+      - Key: "t_awscon"
+        Value: "Development"
+      - Key: "t_role"
+        Value: "sofa"
+      - Key: "t_AppID"
+        Value: "SVC01754"
+      - Key: "t_shut"
+        Value: "No"
+      - Key: "t_pillar"
+        Value: "Foundation"
+      - Key: "t_cmdb"
+        Value: "No"
+      - Key: "t_dcl"
+        Value: "DCL3"
+  ECSCluster:
+    Type: 'AWS::ECS::Cluster'
+    Properties:
+      Tags:
+      - Key: "t_cost_centre"
+        Value: "3651091"
+      - Key: "t_name"
+        Value: "sofa"
+      - Key: "t_owner_individual"
+        Value: "Vikram Medishetty"
+      - Key: "t_responsible_individuals"
+        Value: "Sofaops@pearson.com"
+      - Key: "t_environment"
+        Value: "Development"
+      - Key: "t_awscon"
+        Value: "Development"
+      - Key: "t_role"
+        Value: "sofa"
+      - Key: "t_AppID"
+        Value: "SVC01754"
+      - Key: "t_shut"
+        Value: "No"
+      - Key: "t_pillar"
+        Value: "Foundation"
+      - Key: "t_cmdb"
+        Value: "No"
+      - Key: "t_dcl"
+        Value: "DCL3"
+  FargateContainerSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Access to the Fargate containers
+      VpcId: !Ref VPC
+      Tags:
+      - Key: "t_cost_centre"
+        Value: "3651091"
+      - Key: "t_name"
+        Value: "sofa"
+      - Key: "t_owner_individual"
+        Value: "Vikram Medishetty"
+      - Key: "t_responsible_individuals"
+        Value: "Sofaops@pearson.com"
+      - Key: "t_environment"
+        Value: "Development"
+      - Key: "t_awscon"
+        Value: "Development"
+      - Key: "t_role"
+        Value: "sofa"
+      - Key: "t_AppID"
+        Value: "SVC01754"
+      - Key: "t_shut"
+        Value: "No"
+      - Key: "t_pillar"
+        Value: "Foundation"
+      - Key: "t_cmdb"
+        Value: "No"
+      - Key: "t_dcl"
+        Value: "DCL3"
+  EcsSecurityGroupIngressFromPublicALB:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      Description: Ingress from the public ALB
+      GroupId: !Ref FargateContainerSecurityGroup
+      IpProtocol: -1
+      SourceSecurityGroupId: !Ref PublicLoadBalancerSG
+      Tags:
+      - Key: "t_cost_centre"
+        Value: "3651091"
+      - Key: "t_name"
+        Value: "sofa"
+      - Key: "t_owner_individual"
+        Value: "Vikram Medishetty"
+      - Key: "t_responsible_individuals"
+        Value: "Sofaops@pearson.com"
+      - Key: "t_environment"
+        Value: "Development"
+      - Key: "t_awscon"
+        Value: "Development"
+      - Key: "t_role"
+        Value: "sofa"
+      - Key: "t_AppID"
+        Value: "SVC01754"
+      - Key: "t_shut"
+        Value: "No"
+      - Key: "t_pillar"
+        Value: "Foundation"
+      - Key: "t_cmdb"
+        Value: "No"
+      - Key: "t_dcl"
+        Value: "DCL3"
+  EcsSecurityGroupIngressFromSelf:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      Description: Ingress from other containers in the same security group
+      GroupId: !Ref FargateContainerSecurityGroup
+      IpProtocol: -1
+      SourceSecurityGroupId: !Ref FargateContainerSecurityGroup
+      Tags:
+      - Key: "t_cost_centre"
+        Value: "3651091"
+      - Key: "t_name"
+        Value: "sofa"
+      - Key: "t_owner_individual"
+        Value: "Vikram Medishetty"
+      - Key: "t_responsible_individuals"
+        Value: "Sofaops@pearson.com"
+      - Key: "t_environment"
+        Value: "Development"
+      - Key: "t_awscon"
+        Value: "Development"
+      - Key: "t_role"
+        Value: "sofa"
+      - Key: "t_AppID"
+        Value: "SVC01754"
+      - Key: "t_shut"
+        Value: "No"
+      - Key: "t_pillar"
+        Value: "Foundation"
+      - Key: "t_cmdb"
+        Value: "No"
+      - Key: "t_dcl"
+        Value: "DCL3"
+  PublicLoadBalancerSG:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Access to the public facing load balancer
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: -1
+      Tags:
+      - Key: "t_cost_centre"
+        Value: "3651091"
+      - Key: "t_name"
+        Value: "sofa"
+      - Key: "t_owner_individual"
+        Value: "Vikram Medishetty"
+      - Key: "t_responsible_individuals"
+        Value: "Sofaops@pearson.com"
+      - Key: "t_environment"
+        Value: "Development"
+      - Key: "t_awscon"
+        Value: "Development"
+      - Key: "t_role"
+        Value: "sofa"
+      - Key: "t_AppID"
+        Value: "SVC01754"
+      - Key: "t_shut"
+        Value: "No"
+      - Key: "t_pillar"
+        Value: "Foundation"
+      - Key: "t_cmdb"
+        Value: "No"
+      - Key: "t_dcl"
+        Value: "DCL3"
+  PublicLoadBalancer:
+    Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer'
+    Properties:
+      Scheme: internet-facing
+      LoadBalancerAttributes:
+        - Key: idle_timeout.timeout_seconds
+          Value: '30'
+      Subnets:
+        - !Ref PublicSubnetOne
+        - !Ref PublicSubnetTwo
+      SecurityGroups:
+        - !Ref PublicLoadBalancerSG
+      Tags:
+      - Key: "t_cost_centre"
+        Value: "3651091"
+      - Key: "t_name"
+        Value: "sofa"
+      - Key: "t_owner_individual"
+        Value: "Vikram Medishetty"
+      - Key: "t_responsible_individuals"
+        Value: "Sofaops@pearson.com"
+      - Key: "t_environment"
+        Value: "Development"
+      - Key: "t_awscon"
+        Value: "Development"
+      - Key: "t_role"
+        Value: "sofa"
+      - Key: "t_AppID"
+        Value: "SVC01754"
+      - Key: "t_shut"
+        Value: "No"
+      - Key: "t_pillar"
+        Value: "Foundation"
+      - Key: "t_cmdb"
+        Value: "No"
+      - Key: "t_dcl"
+        Value: "DCL3"
+  TargetGroupPublic:
+    Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
+    Properties:
+      HealthCheckIntervalSeconds: 70
+      HealthCheckPath: /health
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 60
+      HealthyThresholdCount: 10
+      Port: 8080
+      Protocol: HTTP
+      UnhealthyThresholdCount: 10
+      VpcId: !Ref VPC
+      Tags:
+      - Key: "t_cost_centre"
+        Value: "3651091"
+      - Key: "t_name"
+        Value: "sofa"
+      - Key: "t_owner_individual"
+        Value: "Vikram Medishetty"
+      - Key: "t_responsible_individuals"
+        Value: "Sofaops@pearson.com"
+      - Key: "t_environment"
+        Value: "Development"
+      - Key: "t_awscon"
+        Value: "Development"
+      - Key: "t_role"
+        Value: "sofa"
+      - Key: "t_AppID"
+        Value: "SVC01754"
+      - Key: "t_shut"
+        Value: "No"
+      - Key: "t_pillar"
+        Value: "Foundation"
+      - Key: "t_cmdb"
+        Value: "No"
+      - Key: "t_dcl"
+        Value: "DCL3"
+  PublicLoadBalancerListener:
+    Type: 'AWS::ElasticLoadBalancingV2::Listener'
+    DependsOn:
+      - PublicLoadBalancer
+    Properties:
+      DefaultActions:
+        - TargetGroupArn: !Ref TargetGroupPublic
+          Type: forward
+      LoadBalancerArn: !Ref PublicLoadBalancer
+      Port: 8080
+      Protocol: HTTP
+      Tags:
+      - Key: "t_cost_centre"
+        Value: "3651091"
+      - Key: "t_name"
+        Value: "sofa"
+      - Key: "t_owner_individual"
+        Value: "Vikram Medishetty"
+      - Key: "t_responsible_individuals"
+        Value: "Sofaops@pearson.com"
+      - Key: "t_environment"
+        Value: "Development"
+      - Key: "t_awscon"
+        Value: "Development"
+      - Key: "t_role"
+        Value: "sofa"
+      - Key: "t_AppID"
+        Value: "SVC01754"
+      - Key: "t_shut"
+        Value: "No"
+      - Key: "t_pillar"
+        Value: "Foundation"
+      - Key: "t_cmdb"
+        Value: "No"
+      - Key: "t_dcl"
+        Value: "DCL3"
+  ECSRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ecs.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Tags:
+      - Key: "t_cost_centre"
+        Value: "3651091"
+      - Key: "t_name"
+        Value: "sofa"
+      - Key: "t_owner_individual"
+        Value: "Vikram Medishetty"
+      - Key: "t_responsible_individuals"
+        Value: "Sofaops@pearson.com"
+      - Key: "t_environment"
+        Value: "Development"
+      - Key: "t_awscon"
+        Value: "Development"
+      - Key: "t_role"
+        Value: "sofa"
+      - Key: "t_AppID"
+        Value: "SVC01754"
+      - Key: "t_shut"
+        Value: "No"
+      - Key: "t_pillar"
+        Value: "Foundation"
+      - Key: "t_cmdb"
+        Value: "No"
+      - Key: "t_dcl"
+        Value: "DCL3"
+      Policies:
+        - PolicyName: ecs-service
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'ec2:AttachNetworkInterface'
+                  - 'ec2:CreateNetworkInterface'
+                  - 'ec2:CreateNetworkInterfacePermission'
+                  - 'ec2:DeleteNetworkInterface'
+                  - 'ec2:DeleteNetworkInterfacePermission'
+                  - 'ec2:Describe*'
+                  - 'ec2:DetachNetworkInterface'
+                  - 'elasticloadbalancing:DeregisterInstancesFromLoadBalancer'
+                  - 'elasticloadbalancing:DeregisterTargets'
+                  - 'elasticloadbalancing:Describe*'
+                  - 'elasticloadbalancing:RegisterInstancesWithLoadBalancer'
+                  - 'elasticloadbalancing:RegisterTargets'
+                Resource: '*'
+  ECSTaskExecutionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ecs-tasks.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: AmazonECSTaskExecutionRolePolicy
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'ecr:GetAuthorizationToken'
+                  - 'ecr:BatchCheckLayerAvailability'
+                  - 'ecr:GetDownloadUrlForLayer'
+                  - 'ecr:BatchGetImage'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: '*'
+      Tags:
+      - Key: "t_cost_centre"
+        Value: "3651091"
+      - Key: "t_name"
+        Value: "sofa"
+      - Key: "t_owner_individual"
+        Value: "Vikram Medishetty"
+      - Key: "t_responsible_individuals"
+        Value: "Sofaops@pearson.com"
+      - Key: "t_environment"
+        Value: "Development"
+      - Key: "t_awscon"
+        Value: "Development"
+      - Key: "t_role"
+        Value: "sofa"
+      - Key: "t_AppID"
+        Value: "SVC01754"
+      - Key: "t_shut"
+        Value: "No"
+      - Key: "t_pillar"
+        Value: "Foundation"
+      - Key: "t_cmdb"
+        Value: "No"
+      - Key: "t_dcl"
+        Value: "DCL3"
+  TargetGroup:
+    Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
+    Properties:
+      HealthCheckIntervalSeconds: 70
+      HealthCheckPath: /health
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 60
+      HealthyThresholdCount: 10
+      TargetType: ip
+      Port: 8080
+      Protocol: HTTP
+      UnhealthyThresholdCount: 10
+      VpcId: !Ref VPC
+      Tags:
+      - Key: "t_cost_centre"
+        Value: "3651091"
+      - Key: "t_name"
+        Value: "sofa"
+      - Key: "t_owner_individual"
+        Value: "Vikram Medishetty"
+      - Key: "t_responsible_individuals"
+        Value: "Sofaops@pearson.com"
+      - Key: "t_environment"
+        Value: "Development"
+      - Key: "t_awscon"
+        Value: "Development"
+      - Key: "t_role"
+        Value: "sofa"
+      - Key: "t_AppID"
+        Value: "SVC01754"
+      - Key: "t_shut"
+        Value: "No"
+      - Key: "t_pillar"
+        Value: "Foundation"
+      - Key: "t_cmdb"
+        Value: "No"
+      - Key: "t_dcl"
+        Value: "DCL3"
+  LoadBalancerRule:
+    Type: 'AWS::ElasticLoadBalancingV2::ListenerRule'
+    Properties:
+      Actions:
+        - TargetGroupArn: !Ref TargetGroup
+          Type: forward
+      Conditions:
+        - Field: path-pattern
+          Values:
+            - !Ref Path
+      ListenerArn: !Ref PublicLoadBalancerListener
+      Priority: 1  
+      Tags:
+      - Key: "t_cost_centre"
+        Value: "3651091"
+      - Key: "t_name"
+        Value: "sofa"
+      - Key: "t_owner_individual"
+        Value: "Vikram Medishetty"
+      - Key: "t_responsible_individuals"
+        Value: "Sofaops@pearson.com"
+      - Key: "t_environment"
+        Value: "Development"
+      - Key: "t_awscon"
+        Value: "Development"
+      - Key: "t_role"
+        Value: "sofa"
+      - Key: "t_AppID"
+        Value: "SVC01754"
+      - Key: "t_shut"
+        Value: "No"
+      - Key: "t_pillar"
+        Value: "Foundation"
+      - Key: "t_cmdb"
+        Value: "No"
+      - Key: "t_dcl"
+        Value: "DCL3"
+  EC2Role:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [ec2.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Path: /
+      Policies:
+      - PolicyName: ecs-service
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action:
+              - 'ecs:CreateCluster'
+              - 'ecs:DeregisterContainerInstance'
+              - 'ecs:DiscoverPollEndpoint'
+              - 'ecs:Poll'
+              - 'ecs:RegisterContainerInstance'
+              - 'ecs:StartTelemetrySession'
+              - 'ecs:Submit*'
+              - 'logs:CreateLogStream'
+              - 'logs:PutLogEvents'
+              - 'ecr:GetAuthorizationToken'
+              - 'ecr:BatchGetImage'
+              - 'ecr:GetDownloadUrlForLayer'
+            Resource: '*'
+      Tags:
+      - Key: "t_cost_centre"
+        Value: "3651091"
+      - Key: "t_name"
+        Value: "sofa"
+      - Key: "t_owner_individual"
+        Value: "Vikram Medishetty"
+      - Key: "t_responsible_individuals"
+        Value: "Sofaops@pearson.com"
+      - Key: "t_environment"
+        Value: "Development"
+      - Key: "t_awscon"
+        Value: "Development"
+      - Key: "t_role"
+        Value: "sofa"
+      - Key: "t_AppID"
+        Value: "SVC01754"
+      - Key: "t_shut"
+        Value: "No"
+      - Key: "t_pillar"
+        Value: "Foundation"
+      - Key: "t_cmdb"
+        Value: "No"
+      - Key: "t_dcl"
+        Value: "DCL3"
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles: [!Ref 'EC2Role']
+      Tags:
+      - Key: "t_cost_centre"
+        Value: "3651091"
+      - Key: "t_name"
+        Value: "sofa"
+      - Key: "t_owner_individual"
+        Value: "Vikram Medishetty"
+      - Key: "t_responsible_individuals"
+        Value: "Sofaops@pearson.com"
+      - Key: "t_environment"
+        Value: "Development"
+      - Key: "t_awscon"
+        Value: "Development"
+      - Key: "t_role"
+        Value: "sofa"
+      - Key: "t_AppID"
+        Value: "SVC01754"
+      - Key: "t_shut"
+        Value: "No"
+      - Key: "t_pillar"
+        Value: "Foundation"
+      - Key: "t_cmdb"
+        Value: "No"
+      - Key: "t_dcl"
+        Value: "DCL3"
+  ECSTaskInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles: [!Ref 'ECSTaskExecutionRole']
+      Tags:
+      - Key: "t_cost_centre"
+        Value: "3651091"
+      - Key: "t_name"
+        Value: "sofa"
+      - Key: "t_owner_individual"
+        Value: "Vikram Medishetty"
+      - Key: "t_responsible_individuals"
+        Value: "Sofaops@pearson.com"
+      - Key: "t_environment"
+        Value: "Development"
+      - Key: "t_awscon"
+        Value: "Development"
+      - Key: "t_role"
+        Value: "sofa"
+      - Key: "t_AppID"
+        Value: "SVC01754"
+      - Key: "t_shut"
+        Value: "No"
+      - Key: "t_pillar"
+        Value: "Foundation"
+      - Key: "t_cmdb"
+        Value: "No"
+      - Key: "t_dcl"
+        Value: "DCL3"
+  CloudwatchLogsGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Ref 'AWS::StackName'
+      Tags:
+      - Key: "t_cost_centre"
+        Value: "3651091"
+      - Key: "t_name"
+        Value: "sofa"
+      - Key: "t_owner_individual"
+        Value: "Vikram Medishetty"
+      - Key: "t_responsible_individuals"
+        Value: "Sofaops@pearson.com"
+      - Key: "t_environment"
+        Value: "Development"
+      - Key: "t_awscon"
+        Value: "Development"
+      - Key: "t_role"
+        Value: "sofa"
+      - Key: "t_AppID"
+        Value: "SVC01754"
+      - Key: "t_shut"
+        Value: "No"
+      - Key: "t_pillar"
+        Value: "Foundation"
+      - Key: "t_cmdb"
+        Value: "No"
+      - Key: "t_dcl"
+        Value: "DCL3"   
+  testDBCluster:
+    Type: "AWS::RDS::DBCluster"
+    Properties:
+      StorageEncrypted: false
+      EngineVersion: "5.6.10a"
+      AvailabilityZones:
+      - "us-east-1a"
+      - "us-east-1b"
+      DatabaseName: "sofa"
+      DBClusterIdentifier: "${environmentName}-test"
+      PreferredMaintenanceWindow: "fri:06:44-fri:07:14"
+      DBSubnetGroupName: "default"
+      PreferredBackupWindow: "04:22-04:52"
+      MasterUserPassword: "${AuroraMasterUserPassword}"
+      MasterUsername: "${AuroraMasterUsername}"
+      BackupRetentionPeriod: 1
+      Engine: "aurora"
+      Tags:
+      - Key: "t_cost_centre"
+        Value: "3651091"
+      - Key: "t_name"
+        Value: "sofa"
+      - Key: "t_owner_individual"
+        Value: "Vikram Medishetty"
+      - Key: "t_responsible_individuals"
+        Value: "Sofaops@pearson.com"
+      - Key: "t_environment"
+        Value: "Development"
+      - Key: "t_awscon"
+        Value: "Development"
+      - Key: "t_role"
+        Value: "sofa"
+      - Key: "t_AppID"
+        Value: "SVC01754"
+      - Key: "t_shut"
+        Value: "No"
+      - Key: "t_pillar"
+        Value: "Foundation"
+      - Key: "t_cmdb"
+        Value: "No"
+      - Key: "t_dcl"
+        Value: "DCL3"
+  testDBInstance:
+    Type: "AWS::RDS::DBInstance"
+    Properties:
+      DBInstanceClass: "db.t2.small"
+      DBClusterIdentifier: !Ref testDBCluster
+      Engine: "aurora"
+      Tags:
+      - Key: "t_cost_centre"
+        Value: "3651091"
+      - Key: "t_name"
+        Value: "sofa"
+      - Key: "t_owner_individual"
+        Value: "Vikram Medishetty"
+      - Key: "t_responsible_individuals"
+        Value: "Sofaops@pearson.com"
+      - Key: "t_environment"
+        Value: "Development"
+      - Key: "t_awscon"
+        Value: "Development"
+      - Key: "t_role"
+        Value: "sofa"
+      - Key: "t_AppID"
+        Value: "SVC01754"
+      - Key: "t_shut"
+        Value: "No"
+      - Key: "t_pillar"
+        Value: "Foundation"
+      - Key: "t_cmdb"
+        Value: "No"
+      - Key: "t_dcl"
+        Value: "DCL3"
+  ElasticsearchDomain:
+    Type: 'AWS::Elasticsearch::Domain'
+    Properties:
+      DomainName: String
+      ElasticsearchVersion: String
+      ElasticsearchClusterConfig:
+        InstanceCount: '1'
+        InstanceType: String
+      EBSOptions:
+        EBSEnabled: 'true'
+        Iops: 0
+        VolumeSize: 10
+        VolumeType: standard
+      SnapshotOptions:
+        AutomatedSnapshotStartHour: '0'
+      AccessPolicies:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Deny
+            Principal:
+              AWS: '*'
+            Action: 'es:*'
+            Resource: '*'            
+      AdvancedOptions:
+        rest.action.multi.allow_explicit_index: 'true'
+      Tags:
+        - Key: foo
+          Value: bar
+      VPCOptions:
+        SubnetIds:
+          - !Ref PublicSubnetOne
+          - !Ref PublicSubnetTwo
+        SecurityGroupIds:
+          - !Ref FargateContainerSecurityGroup                
+  TaskDefinition:
+    Type: "AWS::ECS::TaskDefinition"
+    Properties:
+      ExecutionRoleArn: !Ref ECSTaskExecutionRole
+      TaskRoleArn: !Ref ECSTaskExecutionRole
+      Memory: !Ref ContainerMemory
+      ContainerDefinitions:
+      - Name: "etl-privacyService-latest"
+        Image: "${aws-account-id}.dkr.ecr.${aws-region}.amazonaws.com/etl-privacyService:latest"
+        Cpu: !Ref ContainerCpu
+        Memory: !Ref ContainerMemory
+        LogConfiguration:
+          LogDriver: "awslogs"
+          Options:
+            awslogs-group: !Ref 'AWS::StackName'
+            awslogs-region: "${aws-region}"
+            awslogs-stream-prefix: "etl-privacyService-latest"
+        PortMappings:
+        - ContainerPort: "8080"
+      Cpu: !Ref ContainerCpu
+      RequiresCompatibilities:
+      - "FARGATE"
+      NetworkMode: "awsvpc"
+      Tags:
+      - Key: "t_cost_centre"
+        Value: "3651091"
+      - Key: "t_name"
+        Value: "sofa"
+      - Key: "t_owner_individual"
+        Value: "Vikram Medishetty"
+      - Key: "t_responsible_individuals"
+        Value: "Sofaops@pearson.com"
+      - Key: "t_environment"
+        Value: "Development"
+      - Key: "t_awscon"
+        Value: "Development"
+      - Key: "t_role"
+        Value: "sofa"
+      - Key: "t_AppID"
+        Value: "SVC01754"
+      - Key: "t_shut"
+        Value: "No"
+      - Key: "t_pillar"
+        Value: "Foundation"
+      - Key: "t_cmdb"
+        Value: "No"
+      - Key: "t_dcl"
+        Value: "DCL3"
+  Service:
+    Type: "AWS::ECS::Service"
+    Properties:
+      TaskDefinition: !Ref TaskDefinition
+      Cluster: !Ref ECSCluster
+      LoadBalancers:
+      - ContainerName: "etl-privacyService-latest"
+        ContainerPort: "8080"
+        TargetGroupArn: !Ref TargetGroup
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: "ENABLED"
+          SecurityGroups:
+          - !Ref FargateContainerSecurityGroup
+          Subnets:
+          - !Ref PublicSubnetOne
+          - !Ref PublicSubnetTwo
+      DesiredCount: !Ref DesiredCount
+      LaunchType: "FARGATE"
+      Tags:
+      - Key: "t_cost_centre"
+        Value: "3651091"
+      - Key: "t_name"
+        Value: "sofa"
+      - Key: "t_owner_individual"
+        Value: "Vikram Medishetty"
+      - Key: "t_responsible_individuals"
+        Value: "Sofaops@pearson.com"
+      - Key: "t_environment"
+        Value: "Development"
+      - Key: "t_awscon"
+        Value: "Development"
+      - Key: "t_role"
+        Value: "sofa"
+      - Key: "t_AppID"
+        Value: "SVC01754"
+      - Key: "t_shut"
+        Value: "No"
+      - Key: "t_pillar"
+        Value: "Foundation"
+      - Key: "t_cmdb"
+        Value: "No"
+      - Key: "t_dcl"
+        Value: "DCL3"
+    DependsOn: "LoadBalancerRule"
+Outputs:
+  ClusterName:
+    Description: The name of the ECS cluster, used by the deploy script
+    Value: !Ref 'ECSCluster'
+    Export:
+      Name: !Join [':', [!Ref "AWS::StackName", "ClusterName" ]]
+  Url:
+    Description: The url at which the application is available
+    Value: !Join ['', [!GetAtt 'PublicLoadBalancer.DNSName']]
+  DomainEndpoint:
+    Value: !GetAtt ElasticsearchDomain.DomainEndpoint
+  VPCId:
+    Description: The ID of the VPC that this stack is deployed in
+    Value: !Ref 'VPC'
+    Export:
+      Name: !Join [':', [!Ref "AWS::StackName", "VPCId" ]]
