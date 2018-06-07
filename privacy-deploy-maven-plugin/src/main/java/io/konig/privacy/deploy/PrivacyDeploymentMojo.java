@@ -54,20 +54,20 @@ public class PrivacyDeploymentMojo
     public void execute()
         throws MojoExecutionException
     {
-    	System.out.println("SL4J Logger--->"+cloudformationFile);
     	slf4jLogger.info("===========================================");
 		slf4jLogger.info("Getting Started with AWS CloudFormation");
 		slf4jLogger.info("===========================================\n");
         String stackName           = "CloudFormationPrivacyStack";
-        /*try {
-			AmazonCloudFormation stackbuilder = AmazonCloudFormationClientBuilder.standard()
+        AmazonCloudFormation stackbuilder = null;
+        try {
+			stackbuilder = AmazonCloudFormationClientBuilder.standard()
 			        .withCredentials(getCredential())
 			        .withRegion(System.getProperty("aws.region"))
 			        .build();
 		} catch (Exception e1) {
 			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}*/
+			e1.printStackTrace();			
+		}
         try {
             // Create a stack
             CreateStackRequest createRequest = new CreateStackRequest();
@@ -80,7 +80,7 @@ public class PrivacyDeploymentMojo
 				e.printStackTrace();
 			}
             slf4jLogger.info("Creating a stack called "+ createRequest.getStackName());
-            //stackbuilder.createStack(createRequest);
+            stackbuilder.createStack(createRequest);
 
             // Wait for stack to be created
             // Note that you could use SNS notifications on the CreateStack call to track the progress of the stack creation
