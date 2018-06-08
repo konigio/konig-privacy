@@ -39,13 +39,13 @@ public class PrivacyInjectionMojo
      * Location of the file.
      */
 
-    @Parameter(property="konig.privacy.deployment.configFile", required = true)
+	@Parameter(property="konig.privacy.deployment.configFile", required = true)
     private File configFile;
     
-    @Parameter(property="konig.privacy.deployment.velocityTemplate", required = true)
+	@Parameter(property="konig.privacy.deployment.velocityTemplate", required = true)
     private File velocityTemplate;
     
-    @Parameter(property="konig.privacy.deployment.cloudformationFile", defaultValue="target/deploy/aws/cloudformation.yaml")
+	@Parameter(property="konig.privacy.deployment.cloudformationFile", defaultValue="${Project.basedir}/target/deploy/aws/cloudformation.yaml")
     private File cloudformationFile;
 
     public void execute()
