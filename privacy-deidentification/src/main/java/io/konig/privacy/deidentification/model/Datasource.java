@@ -7,7 +7,9 @@ public class Datasource {
 	private String id;
 	private String uuid;
 	private List<LanguageString> name;
+	private List<LanguageString> description; 
 	private double trustLevel;
+	
 	
 	/**
 	 * Get the fully-qualified IRI for this Datasource
@@ -49,6 +51,20 @@ public class Datasource {
 		this.name = name;
 	}
 	
+	/** Get the list of description for this Datasource in various languages.
+	 * @return the description
+	 */
+	public List<LanguageString> getDescription() {
+		return description;
+	}
+
+	/** Set the list of description for this Datasource in various languages.
+	 * @param description the description to set
+	 */
+	public void setDescription(List<LanguageString> description) {
+		this.description = description;
+	}
+	
 	/**
 	 * Get the trust level of this Datasource, in the range from [0,1].  Higher
 	 * values indicate higher levels of trust.
@@ -63,6 +79,8 @@ public class Datasource {
 		}
 		this.trustLevel = trustLevel;
 	}
+
+	
 	
 	
 	

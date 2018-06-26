@@ -13,7 +13,7 @@ public interface DatasourceService {
 	 * @return The UUID for the Datasource.
 	 * @throws DataAccessException If an error occurred while storing the Datasource record.
 	 */
-	public String put(Datasource datasource) throws DataAccessException;
+	public String put(Datasource datasource) throws DataAccessException, Exception;
 	
 	/**
 	 * Get a Datasource record based on the UUID for the datasource.
@@ -23,4 +23,19 @@ public interface DatasourceService {
 	 * @throws DataAccessException  If an error occurred while fetching the record.
 	 */
 	public Datasource getByUuid(String uuid) throws DataAccessException;
+	
+	/**
+	 * Update the Datasource based on the UUId of the datasource.
+	 * @param uid
+	 * @param datasource
+	 * @throws DataAccessException
+	 */
+	public void updateDatasourceByUid (String uid,Datasource datasource) throws DataAccessException;
+	
+	/**
+	 * Delete Datasource record based on UUID of the datasource.
+	 * @param Uid
+	 * @throws DataAccessException
+	 */
+	public void deleteDatasourceByUid (String Uid) throws DataAccessException;
 }
