@@ -27,7 +27,7 @@ public class DatasourceServiceImplTest {
     static class DatasourceServiceImplTestContextConfiguration {
   
         @Bean
-        public DatasourceService employeeService() {
+        public DatasourceService datasourceService() {
             return new DatasourceServiceImpl();
         }
     }

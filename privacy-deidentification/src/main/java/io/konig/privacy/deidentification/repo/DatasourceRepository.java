@@ -1,12 +1,12 @@
 package io.konig.privacy.deidentification.repo;
 
-import java.util.Random;
+import java.security.SecureRandom;
 
+import org.apache.commons.lang.RandomStringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import io.konig.privacy.deidentification.model.Datasource;
 import io.konig.privacy.deidentification.model.DatasourceResultSetExtractor;
@@ -18,10 +18,30 @@ public class DatasourceRepository {
 	@Autowired
     JdbcTemplate template;
 	
+	private static final String DATASOURCE_QUERY = 
+			   "select " +
+			      "UID," +
+			      "ID," +
+			      "NAME," +
+			      "DE_IDENTIFICATION.DATASOURCE_NAME.LANGUAGE," + 
+			      "DE_IDENTIFICATION.DATASOURCE_NAME.VALUE, " +
+			      "DE_IDENTIFICATION.DATASOURCE_DESCRIPTION.Language as DESCRIPTION_LANGUAGE , " +
+			      "DE_IDENTIFICATION.DATASOURCE_DESCRIPTION.VALUE as DESCRIPTION_VALUE," +
+			      "TRUST_LEVEL " +
+			   "from " +
+			      "DE_IDENTIFICATION.DATASOURCE " +
+			      "inner join DE_IDENTIFICATION.DATASOURCE_NAME on " + 
+			         "DE_IDENTIFICATION.DATASOURCE.UID=DE_IDENTIFICATION.DATASOURCE_NAME.DATASOURCE_UID " +
+			      "inner join DE_IDENTIFICATION.DATASOURCE_DESCRIPTION on " +
+			         "DE_IDENTIFICATION.DATASOURCE.UID=DE_IDENTIFICATION.DATASOURCE_DESCRIPTION.DATASOURCE_UID " +  
+			       "and " +
+			          "DE_IDENTIFICATION.DATASOURCE_DESCRIPTION.LANGUAGE=DE_IDENTIFICATION.DATASOURCE_NAME.LANGUAGE " +
+			      "and " +
+			         "UID=?";
+	
     public Datasource getByUuid(String uId){
-        String query1 = "select UID,ID,NAME,DE_IDENTIFICATION.DATASOURCE_NAME.LANGUAGE,DE_IDENTIFICATION.DATASOURCE_NAME.VALUE, DE_IDENTIFICATION.DATASOURCE_DESCRIPTION.Language AS DESCRIPTION_LANGUAGE ,DE_IDENTIFICATION.DATASOURCE_DESCRIPTION.VALUE as DESCRIPTION_VALUE, TRUST_LEVEL from DE_IDENTIFICATION.DATASOURCE INNER JOIN DE_IDENTIFICATION.DATASOURCE_NAME ON DE_IDENTIFICATION.DATASOURCE.UID=DE_IDENTIFICATION.DATASOURCE_NAME.DATASOURCE_UID  INNER JOIN DE_IDENTIFICATION.DATASOURCE_DESCRIPTION ON DE_IDENTIFICATION.DATASOURCE.UID=DE_IDENTIFICATION.DATASOURCE_DESCRIPTION.DATASOURCE_UID  and DE_IDENTIFICATION.DATASOURCE_DESCRIPTION.LANGUAGE=DE_IDENTIFICATION.DATASOURCE_NAME.LANGUAGE and UID=?";
         DatasourceResultSetExtractor extractor = new DatasourceResultSetExtractor();
-        Datasource datasource = template.query(query1, extractor, uId);              
+        Datasource datasource = template.query(DATASOURCE_QUERY, extractor, uId);              
         return datasource;
     }
     public void updateDatasourceByUuid(String uuid,Datasource datasource){
@@ -52,23 +72,29 @@ public class DatasourceRepository {
     	
     }
     
-    public String registerDatasource(Datasource datasource){
+    public String registerDatasource(Datasource datasource) throws Exception{
     	String uuid=null;
-    	uuid=StringUtils.capitalize(randomString(30));
-    	datasource.setUuid(uuid);
-    	insertDataSource(datasource);    	
+    	boolean exist =false;
+    		for (int i=0;i<100;i++){
+    			uuid=randomString(30);
+    			if(!datasourceExists(uuid)) {
+    				datasource.setUuid(uuid);
+    				break;
+    			}else
+    				exist=true;
+    		}    		
+    		if(!exist){
+    			insertDataSource(datasource);
+    		}else
+    			throw new Exception(" completed 100 trials, not able to generate Random string");
     	return uuid;
     }
     
     public  String randomString(int length){
-		String base = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789absdefghijklmnopqrstuvwxyz";
-		Random random = new Random();
-	    StringBuilder b = new StringBuilder();
-	    b.append(base.charAt(random.nextInt(26)));
-	    for(int i = 0; i < length; i++){
-	      b.append(base.charAt(random.nextInt(base.length()-1)));
-	    }
-	    return b.toString();
+    	SecureRandom secureRandom = new SecureRandom();
+    	String strRandomString = 
+    	        RandomStringUtils.random(length, 0, 0, true, true, null, secureRandom);
+    	return strRandomString;
 	  }
     
     public void insertDataSource (Datasource datasource){
@@ -85,4 +111,6 @@ public class DatasourceRepository {
     		template.update(query_2,datasource.getUuid(),datasource.getDescription().get(i).getValue(),datasource.getDescription().get(i).getLanguage());
     	}
     }
+    
+    
 }
