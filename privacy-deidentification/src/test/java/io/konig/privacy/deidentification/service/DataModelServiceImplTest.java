@@ -62,7 +62,6 @@ public class DataModelServiceImplTest {
     	ObjectMapper mapper = new ObjectMapper();
 		JsonNode jsonNode = mapper.readValue(jsonStr, JsonNode.class);
 		
-		System.out.println("jsonNode in set up method" + jsonNode.get("title").textValue());
 		
 		 Mockito.when(dataModelRepository.getSchemaByVersion("V1"))
          .thenReturn(jsonNode);

@@ -4,7 +4,6 @@ package io.konig.privacy.deidentification.rest;
 import java.io.IOException;
 import java.net.URI;
 
-import javax.servlet.http.HttpServletResponse;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -35,13 +34,9 @@ public class DataModelController {
 	public ResponseEntity<?> getLatestDataModel() throws DataAccessException, IOException{
 		String latestVersion= dataModelService.getLatestDataModel();
 		HttpHeaders responseHeaders = new HttpHeaders();
-		String myURL= "/schema/"+latestVersion;
-		URI location= URI.create(myURL);
-		//response.sendRedirect(myURL);
+		String myURL= "/api/schema/"+latestVersion;
 		responseHeaders.add("Location", myURL);
-		//responseHeaders.setLocation(location);
 		return new ResponseEntity<>(responseHeaders,HttpStatus.MOVED_PERMANENTLY);
-		//return ResponseEntity.status(HttpStatus.MOVED_PERMANENTLY).header(HttpHeaders.LOCATION, myURL).build();
     }
 	
 	@RequestMapping(value="/schema/{version}" , method = RequestMethod.GET)

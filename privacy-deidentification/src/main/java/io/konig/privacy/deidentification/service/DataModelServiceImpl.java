@@ -19,7 +19,7 @@ public class DataModelServiceImpl implements DataModelService{
 	public JsonNode getSchemaByVersion(String version) throws DataAccessException, JsonProcessingException, IOException {
 		JsonNode jsonNode=null;
 		if(!dataModelRepository.dataModelExists(version)){
-			throw new NotFoundException("version=V"+version+" does not exist.");
+			throw new NotFoundException("version=v"+version+" does not exist.");
 		}
 		jsonNode= dataModelRepository.getSchemaByVersion(version);
 		return jsonNode;
