@@ -2,7 +2,12 @@ package io.konig.privacy.deidentification.service;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.List;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.github.fge.jsonschema.core.exceptions.ProcessingException;
+
+import io.konig.privacy.deidentification.model.Person;
 import io.konig.privacy.deidentification.model.PersonKeys;
 import io.konig.privacy.deidentification.model.PersonWithMetadata;
 
@@ -26,8 +31,10 @@ public interface PersonService {
 	 * at least one key for the person.
 	 * 
 	 * @return The pseudonym assigned to the person.  If no pseudonym was previously assigned, one will be generated.
+	 * @throws IOException 
+	 * @throws ProcessingException 
 	 */
-	String post(PersonWithMetadata person);
+	List<PersonKeys> post(Person person, String version,String baseURL) throws ProcessingException, IOException;
 	
 	/**
 	 * Stream a JSON representation of the Personal Information for a specific individual.

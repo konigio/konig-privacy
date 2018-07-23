@@ -12,7 +12,7 @@ public class PersonKeys {
 	private String pseudonym;
 	private List<String> email;
 	private List<Identity> identity;
-	
+	private String id;
 	/**
 	 * Get the pseudonym for the target person as defined by the privacy services
 	 * @return The pseudonym for the target person as defined by the privacy services
@@ -60,6 +60,20 @@ public class PersonKeys {
 	 */
 	public void setIdentity(List<Identity> identity) {
 		this.identity = identity;
+	}
+
+	/**
+	 * @return the id
+	 */
+	public String getId() {
+		return id;
+	}
+
+	/**
+	 * @param id the id to set
+	 */
+	public void setId(String id) {
+		this.id = id;
 	}
 	
 	
