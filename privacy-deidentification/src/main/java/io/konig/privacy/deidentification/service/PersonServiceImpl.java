@@ -21,11 +21,11 @@ public class PersonServiceImpl implements PersonService {
 	PersonRepository personRepository;
 
 	@Override
-	public List<PersonKeys> post(Person person, String version, String baseURL)
-			throws ProcessingException, IOException {
+	public List<PersonKeys> post(Person person, String version)
+			throws ProcessingException, IOException, Exception {
 		// TODO Auto-generated method stub
 		List<PersonKeys> personKeyList = new ArrayList<PersonKeys>();
-		personKeyList = personRepository.put(person, version, baseURL);
+		personKeyList = personRepository.put(person, version);
 		return personKeyList;
 	}
 

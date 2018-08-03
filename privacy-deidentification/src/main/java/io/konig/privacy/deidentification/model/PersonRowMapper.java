@@ -5,10 +5,10 @@ import java.sql.SQLException;
 
 import org.springframework.jdbc.core.RowMapper;
 
-public class PersonRowMapper implements RowMapper{
+public class PersonRowMapper implements RowMapper<PersonData>{
 	PersonData personData=new PersonData();
 	@Override
-	public Object mapRow(ResultSet row, int rowNum) throws SQLException {
+	public PersonData mapRow(ResultSet row, int rowNum) throws SQLException {
 		personData.setPerson(row.getString("PERSON_DATA"));
 		personData.setPseudonym(row.getString("PSEUDONYM"));
 		return personData;

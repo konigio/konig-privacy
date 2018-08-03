@@ -3,6 +3,7 @@ package io.konig.privacy.deidentification.rest;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.beanutils.PropertyUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
@@ -19,15 +20,20 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import io.konig.privacy.deidentification.model.Identity;
 import io.konig.privacy.deidentification.model.Person;
 import io.konig.privacy.deidentification.model.PersonKeys;
 import io.konig.privacy.deidentification.service.DataModelService;
 import io.konig.privacy.deidentification.service.PersonService;
 import io.konig.privacy.deidentification.utils.ValidationUtils;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
 
 @RestController
 @RequestMapping(value = { "/api" })
-
+@Api(value="PersonService")
 public class PersonController {
 
 	@Autowired
@@ -39,11 +45,19 @@ public class PersonController {
 	@Autowired
 	private Environment env;
 
+	@ApiOperation(value = "API to get pseudonyms for a batch of people",response=PersonKeys.class)
+	@ApiResponses(value = {
+	            @ApiResponse(code = 201, message = "Created"),
+	            @ApiResponse(code = 401, message = "You are not authorized to view the resource"),	            
+	            @ApiResponse(code = 404, message = "The resource you were trying to reach is not found")
+	    }
+	    )
 	@RequestMapping(value = "/privacy/{version}/person", method = RequestMethod.POST)
 	@ResponseBody
-	public ResponseEntity<?> postSensitivePII(@PathVariable("version") String version, @RequestBody String strBody)
+	public ResponseEntity<List<PersonKeys>> postSensitivePII(@PathVariable("version") String version, @RequestBody String strBody)
 			throws Exception {
 		List<PersonKeys> personKeyList = new ArrayList<PersonKeys>();
+		List<PersonKeys> personList =new ArrayList<PersonKeys>();
 		ObjectMapper mapper = new ObjectMapper();
 		JsonNode actualObj = mapper.readTree(strBody);
 		String baseURL = env.getProperty("baseURL");
@@ -58,8 +72,25 @@ public class PersonController {
 				throw new Exception("Schema Validation Failed. Invalid Person data");
 			}
 		}
-		personKeyList = personService.post(person, version, baseURL);
-		return new ResponseEntity<List<PersonKeys>>(personKeyList, HttpStatus.CREATED);
+		personKeyList = personService.post(person, version);
+		for(int k=0;k<personKeyList.size();k++){
+			PersonKeys personkeys=new PersonKeys();
+			personkeys.setPseudonym(personKeyList.get(k).getPseudonym());
+			PropertyUtils.setSimpleProperty(personkeys, "id", baseURL+personKeyList.get(k).getPseudonym());
+			List<String> email =new ArrayList<String>();
+			List<Identity> identityList = new ArrayList<Identity>();
+			for(int j=0;j<personKeyList.get(k).getEmail().size();j++){
+				email.add(personKeyList.get(k).getEmail().get(j));
+			}
+			for(int z=0;z<personKeyList.get(k).getIdentity().size();z++){
+				Identity identity = new Identity(personKeyList.get(k).getIdentity().get(z).getIdentityProvider(),personKeyList.get(k).getIdentity().get(z).getIdentifier());
+				identityList.add(identity);
+			}
+			personkeys.setEmail(email);
+			personkeys.setIdentity(identityList);
+			personList.add(personkeys);
+		}
+		return new ResponseEntity<List<PersonKeys>>(personList, HttpStatus.CREATED);
 	}
 
 }

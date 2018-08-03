@@ -1,11 +1,13 @@
 package io.konig.privacy.deidentification.repo;
 
-import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang.RandomStringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -17,7 +19,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
-import com.github.fge.jsonschema.core.exceptions.ProcessingException;
+
 
 import io.konig.privacy.deidentification.model.Identity;
 import io.konig.privacy.deidentification.model.Person;
@@ -31,14 +33,10 @@ public class PersonRepository {
 
 	final static SecureRandom secureRandom = new SecureRandom();
 
-	private static final String FETCH_QUERY = "SELECT DE_IDENTIFICATION.PERSON.PERSON_DATA, DE_IDENTIFICATION.PERSON.PSEUDONYM from "
-			+ "DE_IDENTIFICATION.PERSON  INNER JOIN DE_IDENTIFICATION.PERSON_EMAIL ON DE_IDENTIFICATION.PERSON.PSEUDONYM= DE_IDENTIFICATION.PERSON_EMAIL.PERSON_PSEUDONYM "
-			+ "AND trim(DE_IDENTIFICATION.PERSON_EMAIL.EMAIL_ID)=?";
-
 	@Autowired
 	JdbcTemplate template;
 
-	public List<PersonKeys> put(Person person, String version, String baseURL) throws ProcessingException, IOException {
+	public List<PersonKeys> put(Person person, String version) throws Exception {
 		ArrayNode tagsArray = (ArrayNode) person.getPerson().findValue("data");
 		String dataSourceId = person.getPerson().findValue("datasource").textValue();
 		List<PersonKeys> personKeyList = new ArrayList<PersonKeys>();
@@ -47,59 +45,78 @@ public class PersonRepository {
 			PersonData personData = null;
 			ObjectNode objectValue = (ObjectNode) tagsArray.get(i);
 			String pseudonym = null;
-			ArrayNode emailArray = (ArrayNode) objectValue.findValue("email");
+
 			List<String> email = new ArrayList<String>();
-			boolean IdentifierExists = false;
-			for (int j = 0; j < emailArray.size(); j++) {
-				TextNode textValue = (TextNode) emailArray.get(j);
-				IdentifierExists = identifierExists(textValue.textValue());
-				if (IdentifierExists) {
-
-					PersonRowMapper personRowMapper = new PersonRowMapper();
-					personData = (PersonData) template.queryForObject(FETCH_QUERY, personRowMapper,
-							textValue.textValue());
-
-					if (personData.getPerson() != null) {
-						ObjectMapper om = new ObjectMapper();
-						JsonNode beforeNode = om.readTree(personData.getPerson());
-						JsonNode afterNode = om.readTree(objectValue.toString());
-						JsonNode mergeNode = merge(beforeNode, afterNode);
-
-						String updateQuery = "UPDATE DE_IDENTIFICATION.PERSON SET PERSON_DATA=? WHERE PSEUDONYM=?";
-						template.update(updateQuery, mergeNode.toString(), personData.getPseudonym());
-
-						personKeys.setId(baseURL + personData.getPseudonym());
-						personKeys.setPseudonym(personData.getPseudonym());
-					}
-				} else {
-					pseudonym = randomString(30);
-					personKeys.setId(baseURL + pseudonym);
-					personKeys.setPseudonym(pseudonym);
-
-					String query = "INSERT INTO  DE_IDENTIFICATION.PERSON (DATASOURCE_ID, PERSON_DATA, VERSION,PSEUDONYM) VALUES (?,?,?,?)";
-					template.update(query, dataSourceId, objectValue.toString(), version, pseudonym);
-
-					String query1 = "INSERT INTO  DE_IDENTIFICATION.PERSON_EMAIL (PERSON_PSEUDONYM, EMAIL_ID) VALUES (?,?)";
-					template.update(query1, pseudonym, textValue.textValue());
-				}
-				email.add(textValue.textValue());
-			}
+			StringBuilder sb=new StringBuilder("SELECT distinct a.PERSON_DATA, a.PSEUDONYM from DE_IDENTIFICATION.PERSON AS a ");
+			sb.append("INNER JOIN DE_IDENTIFICATION.PERSON_IDENTITY As b ON a.PSEUDONYM= b.PERSON_PSEUDONYM  ");
+			sb.append("AND ");
+			email=fetchEmailList(objectValue, true, sb);
 			personKeys.setEmail(email);
-			// TODO Need to check how to insert missing Identifier when the
-			// Email is already available.
-			ArrayNode identityArray = (ArrayNode) objectValue.findValue("identity");
+
 			List<Identity> identityList = new ArrayList<Identity>();
-			for (int z = 0; z < identityArray.size(); z++) {
-				TextNode identityproviderValue = (TextNode) identityArray.get(z).get("identityProvider");
-				TextNode identifier = (TextNode) identityArray.get(z).get("identifier");
-				Identity identity = new Identity(identityproviderValue.textValue(), identifier.textValue());
-				if (!IdentifierExists) {
-					String query2 = "INSERT INTO  DE_IDENTIFICATION.PERSON_IDENTITY (PERSON_PSEUDONYM, IDENTITY_PROVIDER,IDENTIFIER) VALUES (?,?,?)";
-					template.update(query2, pseudonym, identityproviderValue.textValue(), identifier.textValue());
-				}
-				identityList.add(identity);
-			}
+			identityList=fetchIdentityList(objectValue, true, sb);
+			
+			sb.append(")");
 			personKeys.setIdentity(identityList);
+			
+			if(identifierExists(sb.toString())){
+				PersonRowMapper personRowMapper = new PersonRowMapper();
+				personData = (PersonData) template.queryForObject(sb.toString(), personRowMapper
+						);
+				List<String> databaseEmailList=new ArrayList<String>();
+				List<Identity> databaseIdentityList = new ArrayList<Identity>();
+	
+				if (personData.getPerson() != null) {
+					ObjectMapper om = new ObjectMapper();
+					JsonNode beforeNode = om.readTree(personData.getPerson());
+					JsonNode afterNode = om.readTree(objectValue.toString());
+					ObjectNode node = (ObjectNode) new ObjectMapper().readTree(beforeNode.toString());
+					databaseEmailList= fetchEmailList(node, false, sb);
+					databaseIdentityList=fetchIdentityList(node,false,sb);
+					JsonNode mergeNode = merge(beforeNode, afterNode);
+					
+					Collection<String> resultEmail= CollectionUtils.subtract(email, databaseEmailList);
+					Collection<Identity> resultIdentity=  CollectionUtils.subtract(identityList, databaseIdentityList);
+					List<String> finalEmailList =new ArrayList<String>(resultEmail);
+					List<Identity> finalIdentityList = new ArrayList<Identity>(resultIdentity);
+					
+					String updateQuery = "UPDATE DE_IDENTIFICATION.PERSON SET PERSON_DATA=? WHERE PSEUDONYM=?";
+					template.update(updateQuery, mergeNode.toString(), personData.getPseudonym());
+					
+					for(int z=0;z<ListUtils.emptyIfNull(finalEmailList).size();z++){
+						String queryEmail = "INSERT INTO  DE_IDENTIFICATION.PERSON_IDENTITY (PERSON_PSEUDONYM, IDENTITY_PROVIDER,IDENTIFIER) VALUES (?,?,?)";
+						template.update(queryEmail, personData.getPseudonym(),"urn:email" ,finalEmailList.get(z));
+					}
+					
+					for(int y=0;y<ListUtils.emptyIfNull(finalIdentityList).size();y++){
+						String queryIdentity = "INSERT INTO  DE_IDENTIFICATION.PERSON_IDENTITY (PERSON_PSEUDONYM, IDENTITY_PROVIDER,IDENTIFIER) VALUES (?,?,?)";
+						template.update(queryIdentity, personData.getPseudonym(),finalIdentityList.get(y).getIdentityProvider() ,finalIdentityList.get(y).getIdentifier());
+					}
+					
+					
+					personKeys.setPseudonym(personData.getPseudonym());
+				}
+			}
+			else{
+				System.out.println("Insert New Entries");
+				pseudonym = randomString(30);
+				personKeys.setPseudonym(pseudonym);
+				
+				String queryPerson = "INSERT INTO  DE_IDENTIFICATION.PERSON (DATASOURCE_ID, PERSON_DATA, VERSION,PSEUDONYM) VALUES (?,?,?,?)";
+				template.update(queryPerson, dataSourceId, objectValue.toString(), version, pseudonym);
+				
+				
+				for(int k=0;k<ListUtils.emptyIfNull(email).size();k++){
+					String queryPersonIdentity = "INSERT INTO  DE_IDENTIFICATION.PERSON_IDENTITY (PERSON_PSEUDONYM, IDENTITY_PROVIDER,IDENTIFIER) VALUES (?,?,?)";
+					template.update(queryPersonIdentity, pseudonym, "urn:email" ,email.get(k));					
+				}
+				
+				for(int l=0;l<ListUtils.emptyIfNull(identityList).size();l++){
+					String queryPersonIdentity = "INSERT INTO  DE_IDENTIFICATION.PERSON_IDENTITY (PERSON_PSEUDONYM, IDENTITY_PROVIDER,IDENTIFIER) VALUES (?,?,?)";
+					template.update(queryPersonIdentity, pseudonym, identityList.get(l).getIdentityProvider(),identityList.get(l).getIdentifier());			
+				}
+
+			}		
 			personKeyList.add(personKeys);
 		}
 
@@ -151,10 +168,49 @@ public class PersonRepository {
 		}
 		return mainNode;
 	}
-
-	public boolean identifierExists(String id) {
-		String query = "SELECT COUNT(*) FROM DE_IDENTIFICATION.PERSON_EMAIL WHERE EMAIL_ID=?";
-		int count = template.queryForObject(query, Integer.class, id);
+	
+	
+	public List<String> fetchEmailList(ObjectNode objectValue, boolean isDynamicQueryRequired, StringBuilder sbQuery) throws Exception{
+		ArrayNode emailArray = (ArrayNode) objectValue.findValue("email");
+		List<String> email = new ArrayList<String>();
+			for (int j = 0; j < emailArray.size(); j++) {
+				TextNode textValue = (TextNode) emailArray.get(j);
+				if (textValue.textValue().isEmpty()){
+					throw new Exception("Email Id cannot be empty");
+				}
+				if(isDynamicQueryRequired){
+					if(sbQuery.indexOf("b.IDENTIFIER")>0)
+						sbQuery.append(" OR b.IDENTIFIER='"+(textValue.textValue()).trim()+"'");
+					else
+						sbQuery.append(" (b.IDENTIFIER='"+(textValue.textValue()).trim()+"'");
+					}
+				email.add(textValue.textValue());			
+			}
+	
+		return email;
+	}
+	
+	public List<Identity> fetchIdentityList(ObjectNode objectValue, boolean isDynamicQueryRequired,StringBuilder sbQuery) throws Exception{
+		ArrayNode identityArray = (ArrayNode) objectValue.findValue("identity");
+		List<Identity> identityList = new ArrayList<Identity>();
+			for (int z = 0; z < identityArray.size(); z++) {
+				TextNode identityproviderValue = (TextNode) identityArray.get(z).get("identityProvider");
+				TextNode identifier = (TextNode) identityArray.get(z).get("identifier");
+				if(identityproviderValue.textValue().isEmpty() || identifier.textValue().isEmpty()){
+					throw new Exception("Identifier cannot be Empty");
+				}
+				if(isDynamicQueryRequired){
+					sbQuery.append(" OR b.IDENTIFIER='"+(identifier.textValue()).trim()+"'");
+				}
+				Identity identity = new Identity(identityproviderValue.textValue(), identifier.textValue());			
+				identityList.add(identity);
+			}				
+		return identityList;
+	}
+	
+	public boolean identifierExists(String sql) {
+		String query = "SELECT COUNT(*) "+sql.substring(43);
+		int count = template.queryForObject(query, Integer.class);
 		if (count == 0) {
 			return false;
 		} else {

@@ -34,7 +34,7 @@ public interface PersonService {
 	 * @throws IOException 
 	 * @throws ProcessingException 
 	 */
-	List<PersonKeys> post(Person person, String version,String baseURL) throws ProcessingException, IOException;
+	List<PersonKeys> post(Person person, String version) throws ProcessingException, IOException, Exception;
 	
 	/**
 	 * Stream a JSON representation of the Personal Information for a specific individual.

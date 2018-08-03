@@ -64,7 +64,7 @@ public class DatasourceController {
 	    return new ResponseEntity<HashMap<String, Object>>(hmap,responseHeaders, HttpStatus.CREATED);
 	}
 	
-	@RequestMapping(value="/health")
+	@RequestMapping(value="/health", method = RequestMethod.GET)
 	 public @ResponseBody String health() {
 		System.out.println("In Health");
 		return "200 OK";
