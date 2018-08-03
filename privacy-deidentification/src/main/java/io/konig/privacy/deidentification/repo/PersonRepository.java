@@ -98,7 +98,6 @@ public class PersonRepository {
 				}
 			}
 			else{
-				System.out.println("Insert New Entries");
 				pseudonym = randomString(30);
 				personKeys.setPseudonym(pseudonym);
 				
