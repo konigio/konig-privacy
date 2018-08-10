@@ -1,8 +1,13 @@
 package io.konig.privacy.deidentification.repo;
 
+import java.io.File;
+import java.io.IOException;
 import java.security.SecureRandom;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.Iterator;
 import java.util.List;
 
@@ -14,6 +19,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -40,6 +46,9 @@ public class PersonRepository {
 		ArrayNode tagsArray = (ArrayNode) person.getPerson().findValue("data");
 		String dataSourceId = person.getPerson().findValue("datasource").textValue();
 		List<PersonKeys> personKeyList = new ArrayList<PersonKeys>();
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");	
+		GregorianCalendar gregoriancalendar = new GregorianCalendar();
+		String dateModified=sdf.format(gregoriancalendar.getTime());
 		for (int i = 0; i < tagsArray.size(); i++) {
 			PersonKeys personKeys = new PersonKeys();
 			PersonData personData = null;
@@ -47,7 +56,7 @@ public class PersonRepository {
 			String pseudonym = null;
 
 			List<String> email = new ArrayList<String>();
-			StringBuilder sb=new StringBuilder("SELECT distinct a.PERSON_DATA, a.PSEUDONYM from DE_IDENTIFICATION.PERSON AS a ");
+			StringBuilder sb=new StringBuilder("SELECT distinct a.PERSON_DATA, a.ANNOTATED_PERSON_DATA, a.PSEUDONYM from DE_IDENTIFICATION.PERSON AS a ");
 			sb.append("INNER JOIN DE_IDENTIFICATION.PERSON_IDENTITY As b ON a.PSEUDONYM= b.PERSON_PSEUDONYM  ");
 			sb.append("AND ");
 			email=fetchEmailList(objectValue, true, sb);
@@ -59,6 +68,8 @@ public class PersonRepository {
 			sb.append(")");
 			personKeys.setIdentity(identityList);
 			
+			JsonNode annotedJson=createAnnotatedJson(objectValue,dataSourceId,dateModified);
+			
 			if(identifierExists(sb.toString())){
 				PersonRowMapper personRowMapper = new PersonRowMapper();
 				personData = (PersonData) template.queryForObject(sb.toString(), personRowMapper
@@ -68,20 +79,24 @@ public class PersonRepository {
 	
 				if (personData.getPerson() != null) {
 					ObjectMapper om = new ObjectMapper();
-					JsonNode beforeNode = om.readTree(personData.getPerson());
-					JsonNode afterNode = om.readTree(objectValue.toString());
-					ObjectNode node = (ObjectNode) new ObjectMapper().readTree(beforeNode.toString());
+					ObjectMapper annotatedObjectMapper = new ObjectMapper();
+					JsonNode simpleJsonBeforeNode = om.readTree(personData.getPerson());
+					JsonNode simpleJsonAfterNode = om.readTree(objectValue.toString());
+					JsonNode annotatedJsonBeforeNode = annotatedObjectMapper.readTree(personData.getAnnotated_person());
+					JsonNode annotatedJsonAfterNode  = annotatedObjectMapper.readTree(annotedJson.toString());
+					ObjectNode node = (ObjectNode) new ObjectMapper().readTree(simpleJsonBeforeNode.toString());
 					databaseEmailList= fetchEmailList(node, false, sb);
 					databaseIdentityList=fetchIdentityList(node,false,sb);
-					JsonNode mergeNode = merge(beforeNode, afterNode);
+					JsonNode mergeSimpleJsonNode = merge(simpleJsonBeforeNode, simpleJsonAfterNode);
+					JsonNode mergeAnnotatedJsonNode = merge(annotatedJsonBeforeNode,annotatedJsonAfterNode);
 					
 					Collection<String> resultEmail= CollectionUtils.subtract(email, databaseEmailList);
 					Collection<Identity> resultIdentity=  CollectionUtils.subtract(identityList, databaseIdentityList);
 					List<String> finalEmailList =new ArrayList<String>(resultEmail);
 					List<Identity> finalIdentityList = new ArrayList<Identity>(resultIdentity);
 					
-					String updateQuery = "UPDATE DE_IDENTIFICATION.PERSON SET PERSON_DATA=? WHERE PSEUDONYM=?";
-					template.update(updateQuery, mergeNode.toString(), personData.getPseudonym());
+					String updateQuery = "UPDATE DE_IDENTIFICATION.PERSON SET PERSON_DATA=?, ANNOTATED_PERSON_DATA=? WHERE PSEUDONYM=?";
+					template.update(updateQuery, mergeSimpleJsonNode.toString(), mergeAnnotatedJsonNode.toString(), personData.getPseudonym());
 					
 					for(int z=0;z<ListUtils.emptyIfNull(finalEmailList).size();z++){
 						String queryEmail = "INSERT INTO  DE_IDENTIFICATION.PERSON_IDENTITY (PERSON_PSEUDONYM, IDENTITY_PROVIDER,IDENTIFIER) VALUES (?,?,?)";
@@ -101,8 +116,8 @@ public class PersonRepository {
 				pseudonym = randomString(30);
 				personKeys.setPseudonym(pseudonym);
 				
-				String queryPerson = "INSERT INTO  DE_IDENTIFICATION.PERSON (DATASOURCE_ID, PERSON_DATA, VERSION,PSEUDONYM) VALUES (?,?,?,?)";
-				template.update(queryPerson, dataSourceId, objectValue.toString(), version, pseudonym);
+				String queryPerson = "INSERT INTO  DE_IDENTIFICATION.PERSON (DATASOURCE_ID, PERSON_DATA, ANNOTATED_PERSON_DATA,VERSION,PSEUDONYM) VALUES (?,?,?,?,?)";
+				template.update(queryPerson, dataSourceId, objectValue.toString(), annotedJson.toString(), version, pseudonym);
 				
 				
 				for(int k=0;k<ListUtils.emptyIfNull(email).size();k++){
@@ -208,8 +223,66 @@ public class PersonRepository {
 	}
 	
 	public boolean identifierExists(String sql) {
-		String query = "SELECT COUNT(*) "+sql.substring(43);
+		String query = "SELECT COUNT(*) "+sql.substring(68);
 		int count = template.queryForObject(query, Integer.class);
+		if (count == 0) {
+			return false;
+		} else {
+			return true;
+		}
+	}
+	
+	public JsonNode createAnnotatedJson(JsonNode simpleJsonNode, String datsourceId, String dateModified) throws IOException, IOException{
+		ObjectMapper mapper = new ObjectMapper();
+		JsonNode jsonNode= mapper.readTree(simpleJsonNode.toString());
+		Iterator<String> jsonNodeIterator = jsonNode.fieldNames();
+		ObjectMapper annotedMapper = new ObjectMapper();
+		JsonNode annotedJsonNode = annotedMapper.createObjectNode();
+		ArrayNode array = mapper.createArrayNode();
+		while (jsonNodeIterator.hasNext()) {
+			  String itemNode = jsonNodeIterator.next();
+			    JsonNode ValueNode= jsonNode.get(itemNode);
+			if(!ValueNode.isArray()){
+				 JsonNode childNode1 = annotedMapper.createObjectNode();
+			    ((ObjectNode) childNode1).put("property", itemNode.toString());			    
+			    if(ValueNode!=null && ValueNode.isTextual()){
+			    	String Value=jsonNode.get(itemNode).textValue();
+			    	((ObjectNode) childNode1).put("value", Value);
+			    	((ObjectNode) childNode1).put("dataSource", datsourceId);
+			    	((ObjectNode) childNode1).put("dateModified", dateModified);
+			    	
+			    	array.add(childNode1);
+			    }
+			}
+			else{
+				Iterator<JsonNode> fieldNames = ValueNode.elements();
+				while(fieldNames.hasNext()){
+					JsonNode childNode2 = annotedMapper.createObjectNode();
+					JsonNode field = fieldNames.next();
+				        	((ObjectNode) childNode2).put("property", itemNode);
+				        	((ObjectNode) childNode2).set("value", field);
+				        	((ObjectNode) childNode2).put("dataSource", datsourceId);
+				        	((ObjectNode) childNode2).put("dateModified", dateModified);
+				        	array.add(childNode2);
+				}				
+			}		  
+		}
+		((ObjectNode) annotedJsonNode).set("fields", array);
+		
+		return annotedJsonNode;
+	}
+	
+	public JsonNode getAnnotatedSensitivePII(String version, String pseudonym) throws JsonProcessingException, IOException{
+		String query = "SELECT ANNOTATED_PERSON_DATA from DE_IDENTIFICATION.PERSON WHERE VERSION=? and PSEUDONYM=?";
+		String jsonString = template.queryForObject(query, new Object[] { version, pseudonym }, String.class);
+		ObjectMapper mapper = new ObjectMapper();
+		JsonNode jsonNode = mapper.readTree(jsonString);
+		return jsonNode;
+	}
+	
+	public boolean annotatedPIIExists(String version, String pseudonym) {
+		String query = "SELECT COUNT(*) FROM DE_IDENTIFICATION.PERSON WHERE VERSION=? and PSEUDONYM=?";
+		int count = template.queryForObject(query, Integer.class, version,pseudonym);
 		if (count == 0) {
 			return false;
 		} else {

@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.github.fge.jsonschema.core.exceptions.ProcessingException;
 
@@ -57,5 +58,16 @@ public interface PersonService {
 	 * @throws IOException
 	 */
 	boolean streamAnnotatedPersonalInformation(PersonKeys keys, PrintWriter writer) throws IOException;
+	
+	/**
+	 * To get annotated Sensitive for the specific person
+	 * @param version
+	 * @param pseudonym
+	 * @return
+	 * @throws DataAccessException
+	 * @throws IOException 
+	 * @throws JsonProcessingException 
+	 */
+	public JsonNode getAnnotatedSensitivePII(String version,String pseudonym) throws DataAccessException, JsonProcessingException, IOException;
 
 }

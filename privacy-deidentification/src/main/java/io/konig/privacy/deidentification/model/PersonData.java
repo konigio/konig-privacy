@@ -2,6 +2,7 @@ package io.konig.privacy.deidentification.model;
 
 public class PersonData {
 	String person;
+	String annotated_person;
 	String pseudonym;
 
 	/**
@@ -19,6 +20,14 @@ public class PersonData {
 	 */
 	public void setPerson(String person) {
 		this.person = person;
+	}
+
+	public String getAnnotated_person() {
+		return annotated_person;
+	}
+
+	public void setAnnotated_person(String annotated_person) {
+		this.annotated_person = annotated_person;
 	}
 
 	/**
