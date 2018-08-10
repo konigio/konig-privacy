@@ -150,8 +150,44 @@
 					</execution> 
 				</executions>
 			</plugin>
-						
 			
+			<plugin>
+				<groupId>io.fabric8</groupId>
+				<artifactId>docker-maven-plugin</artifactId>
+				<version>0.24.0</version>			
+				<configuration>			
+					<images>
+						<image>			
+							<alias>service</alias>
+							<name>privacy-personal-model</name>			
+							<build>			
+								<from>greyfoxit/alpine-openjdk8</from>
+								<entryPoint>
+									<exec>
+										<arg>java</arg>
+										<arg>-jar</arg>
+										<arg>maven/privacy-personal-model-1.0.0-SNAPSHOT.jar</arg>
+									</exec>
+								</entryPoint>			
+								<assembly>			
+									<descriptorRef>artifact-with-dependencies</descriptorRef>
+								</assembly>
+								<ports>
+									<port>8080</port>
+								</ports>
+							</build>						
+						</image>			
+					</images>
+				</configuration>
+				<executions>
+					<execution>
+						<id>docker-build</id>
+						<goals>
+							<goal>build</goal>
+						</goals>
+					</execution>
+				</executions>						
+			</plugin> 												
 		</plugins>
 	</build>
   
