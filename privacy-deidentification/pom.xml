@@ -118,8 +118,13 @@
     		<groupId>commons-beanutils</groupId>
     		<artifactId>commons-beanutils</artifactId>
     		<version>1.9.3</version>
-		</dependency>		
-  
+		</dependency>
+				
+  		<dependency>
+		    <groupId>net.spy</groupId>
+		    <artifactId>spymemcached</artifactId>
+		    <version>2.12.3</version>
+		</dependency>
   </dependencies>
 
 	<build>
@@ -140,7 +145,6 @@
 				<configuration>
 					<mainClass>io.konig.privacy.deidentification.Application</mainClass>
 					<layout>JAR</layout>
-					<classifier>spring-boot</classifier>
 				</configuration>
 				 <executions>
 					<execution>

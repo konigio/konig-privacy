@@ -4,6 +4,7 @@ import java.security.SecureRandom;
 
 import org.apache.commons.lang.RandomStringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,6 +13,7 @@ import io.konig.privacy.deidentification.model.Datasource;
 import io.konig.privacy.deidentification.model.DatasourceData;
 import io.konig.privacy.deidentification.model.DatasourceDataRowMapper;
 import io.konig.privacy.deidentification.model.DatasourceResultSetExtractor;
+import net.spy.memcached.MemcachedClient;
 
 @Repository
 @Transactional
@@ -19,6 +21,12 @@ public class DatasourceRepository {
 
 	@Autowired
 	JdbcTemplate template;
+	
+	@Autowired
+    MemcachedClient cache;
+	
+	@Autowired
+	private Environment env;
 
 	final static SecureRandom secureRandom = new SecureRandom();
 
@@ -43,6 +51,7 @@ public class DatasourceRepository {
 		datasource.setUuid(uuid);
 		deleteDatasourcebyUid(uuid);
 		insertDataSource(datasource);
+		fetchDataSourceDetails(datasource.getId());
 	}
 
 	public boolean datasourceExists(String Uid) {
@@ -76,6 +85,7 @@ public class DatasourceRepository {
 			datasource.setUuid(uuid);
 			deleteDatasourcebyUid(uuid);
 			insertDataSource(datasource);
+			fetchDataSourceDetails(datasource.getId());
 			return uuid;
 		}
 		else{		
@@ -84,6 +94,7 @@ public class DatasourceRepository {
 				if (!datasourceExists(uuid)) {
 					datasource.setUuid(uuid);
 					insertDataSource(datasource);
+					fetchDataSourceDetails(datasource.getId());
 					return uuid;
 				}
 			}
@@ -132,6 +143,7 @@ public class DatasourceRepository {
 		DatasourceData datasourceData =null;
 		DatasourceDataRowMapper datasourceDataRowMapper = new DatasourceDataRowMapper();
 		datasourceData = (DatasourceData) template.queryForObject(query, datasourceDataRowMapper,id);
+		cache.set(datasourceData.getId(), Integer.parseInt(env.getProperty("aws.memcache.expirytime")), datasourceData.getTrustLevel());
 		return datasourceData;
 	}
 

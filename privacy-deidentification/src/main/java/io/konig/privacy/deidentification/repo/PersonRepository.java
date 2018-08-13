@@ -1,12 +1,10 @@
 package io.konig.privacy.deidentification.repo;
 
-import java.io.File;
 import java.io.IOException;
 import java.security.SecureRandom;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.Iterator;
 import java.util.List;
@@ -15,6 +13,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang.RandomStringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,12 +25,14 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 
-
+import io.konig.privacy.deidentification.model.DatasourceData;
+import io.konig.privacy.deidentification.model.DatasourceDataRowMapper;
 import io.konig.privacy.deidentification.model.Identity;
 import io.konig.privacy.deidentification.model.Person;
 import io.konig.privacy.deidentification.model.PersonData;
 import io.konig.privacy.deidentification.model.PersonKeys;
 import io.konig.privacy.deidentification.model.PersonRowMapper;
+import net.spy.memcached.MemcachedClient;
 
 @Repository
 @Transactional
@@ -41,10 +42,21 @@ public class PersonRepository {
 
 	@Autowired
 	JdbcTemplate template;
+	
+	@Autowired
+    MemcachedClient cache;
+	
+	@Autowired
+	private Environment env;
 
 	public List<PersonKeys> put(Person person, String version) throws Exception {
 		ArrayNode tagsArray = (ArrayNode) person.getPerson().findValue("data");
 		String dataSourceId = person.getPerson().findValue("datasource").textValue();
+		String trustValue = "";
+		if(cache.get(dataSourceId) == null) {
+			fetchDataSourceDetails(dataSourceId);
+		}
+		trustValue = cache.get(dataSourceId).toString();
 		List<PersonKeys> personKeyList = new ArrayList<PersonKeys>();
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");	
 		GregorianCalendar gregoriancalendar = new GregorianCalendar();
@@ -70,7 +82,7 @@ public class PersonRepository {
 			
 			JsonNode annotedJson=createAnnotatedJson(objectValue,dataSourceId,dateModified);
 			
-			if(identifierExists(sb.toString())){
+			if(identifierExists(sb.toString())){				
 				PersonRowMapper personRowMapper = new PersonRowMapper();
 				personData = (PersonData) template.queryForObject(sb.toString(), personRowMapper
 						);
@@ -289,4 +301,14 @@ public class PersonRepository {
 			return true;
 		}
 	}
+	
+	public DatasourceData fetchDataSourceDetails(String id){
+		String query="SELECT ID, TRUST_LEVEL FROM DE_IDENTIFICATION.DATASOURCE where ID=?";
+		DatasourceData datasourceData =null;
+		DatasourceDataRowMapper datasourceDataRowMapper = new DatasourceDataRowMapper();
+		datasourceData = (DatasourceData) template.queryForObject(query, datasourceDataRowMapper,id);
+		cache.set(datasourceData.getId(), Integer.parseInt(env.getProperty("aws.memcache.expirytime")), datasourceData.getTrustLevel());
+		return datasourceData;
+	}
+
 }
