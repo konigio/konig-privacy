@@ -9,6 +9,8 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import io.konig.privacy.deidentification.model.Datasource;
+import io.konig.privacy.deidentification.model.DatasourceData;
+import io.konig.privacy.deidentification.model.DatasourceDataRowMapper;
 import io.konig.privacy.deidentification.model.DatasourceResultSetExtractor;
 
 @Repository
@@ -68,16 +70,25 @@ public class DatasourceRepository {
 
 	public String registerDatasource(Datasource datasource) throws Exception {
 		String uuid = null;
-		for (int i = 0; i < 100; i++) {
-			uuid = randomString(30);
-			if (!datasourceExists(uuid)) {
-				datasource.setUuid(uuid);
-				insertDataSource(datasource);
-				return uuid;
-			}
+		if(datasourceIdExists(datasource.getId())){
+			String query = "SELECT UID FROM DE_IDENTIFICATION.DATASOURCE WHERE ID=?";
+			uuid = template.queryForObject(query, String.class, datasource.getId());
+			datasource.setUuid(uuid);
+			deleteDatasourcebyUid(uuid);
+			insertDataSource(datasource);
+			return uuid;
 		}
-
-		throw new Exception(" completed 100 trials, not able to generate Random string");
+		else{		
+			for (int i = 0; i < 100; i++) {
+				uuid = randomString(30);
+				if (!datasourceExists(uuid)) {
+					datasource.setUuid(uuid);
+					insertDataSource(datasource);
+					return uuid;
+				}
+			}
+			throw new Exception(" completed 100 trials, not able to generate Random string");
+		}
 	}
 
 	public String randomString(int length) {
@@ -104,6 +115,24 @@ public class DatasourceRepository {
 			template.update(query_2, datasource.getUuid(), datasource.getDescription().get(i).getValue(),
 					datasource.getDescription().get(i).getLanguage());
 		}
+	}
+	
+	public boolean datasourceIdExists(String id) {
+		String query = "SELECT COUNT(*) FROM DE_IDENTIFICATION.DATASOURCE WHERE ID=?";
+		int count = template.queryForObject(query, Integer.class, id);
+		if (count == 0) {
+			return false;
+		} else {
+			return true;
+		}
+	}
+	
+	public DatasourceData fetchDataSourceDetails(String id){
+		String query="SELECT ID, TRUST_LEVEL FROM DE_IDENTIFICATION.DATASOURCE where ID=?";
+		DatasourceData datasourceData =null;
+		DatasourceDataRowMapper datasourceDataRowMapper = new DatasourceDataRowMapper();
+		datasourceData = (DatasourceData) template.queryForObject(query, datasourceDataRowMapper,id);
+		return datasourceData;
 	}
 
 }
