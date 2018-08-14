@@ -2,8 +2,11 @@ package io.konig.privacy.deidentification.repo;
 
 import java.io.IOException;
 import java.security.SecureRandom;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.GregorianCalendar;
 import java.util.Iterator;
@@ -14,14 +17,18 @@ import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang.RandomStringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
+import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.HttpClientErrorException;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 
@@ -32,6 +39,8 @@ import io.konig.privacy.deidentification.model.Person;
 import io.konig.privacy.deidentification.model.PersonData;
 import io.konig.privacy.deidentification.model.PersonKeys;
 import io.konig.privacy.deidentification.model.PersonRowMapper;
+import io.konig.privacy.deidentification.model.PersonWithMetadata;
+import io.konig.privacy.deidentification.model.Provenance;
 import net.spy.memcached.MemcachedClient;
 
 @Repository
@@ -39,6 +48,7 @@ import net.spy.memcached.MemcachedClient;
 public class PersonRepository {
 
 	final static SecureRandom secureRandom = new SecureRandom();
+	private final static String URN_EMAIL = "urn:email";
 
 	@Autowired
 	JdbcTemplate template;
@@ -48,6 +58,423 @@ public class PersonRepository {
 	
 	@Autowired
 	private Environment env;
+	
+	private SimpleDateFormat isoTimestampFormat =  new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+	
+	public PersonKeys put(PersonWithMetadata metaPerson) throws HttpClientErrorException {
+		PersonKeys keys = null;
+		
+		PersonData personData = loadPersonData(metaPerson);
+		if (personData == null) {
+			keys = insert(metaPerson);
+			
+		} else {
+			keys = merge(metaPerson, personData);
+		}
+		
+		
+		return keys;
+	}
+
+
+
+
+
+
+
+
+	private PersonKeys merge(PersonWithMetadata metaPerson, PersonData personData) {
+		
+		PersonKeys keys = new PersonKeys();
+		Provenance provenance = metaPerson.getMetadata().getProvenance();
+		keys.setPseudonym(personData.getPseudonym());
+		
+		ObjectMapper objectMapper = new ObjectMapper();
+		JsonNode requestData = metaPerson.getPerson();
+		try {
+			JsonNode annotationData = objectMapper.readTree(personData.getAnnotated_person());
+			
+			DatasourceTrustService trustService = getTrustService();
+			
+			String receivedAtTime = isoTimestampFormat.format(provenance.getReceivedAtTime().getTime());
+			String receivedFrom = provenance.getReceivedFrom();
+			double receivedFromTrustLevel = trustService.getTrustLevel(receivedFrom);
+			
+			MergeInfo mergeInfo = new MergeInfo(objectMapper, receivedAtTime, receivedFrom, receivedFromTrustLevel, trustService);
+			
+			doMerge(mergeInfo, requestData, (ArrayNode) annotationData.get("graph"), keys);
+			
+			
+		} catch (IOException e) {
+			throw new HttpClientErrorException(HttpStatus.BAD_REQUEST, "Invalid JSON payload");
+		}
+		
+		return keys;
+	}
+
+
+
+
+	/**
+	 * Get a TrustService implementation that wraps a local hash map cache, plus memcache, and ultimately defaults to a database lookup.
+	 * For best performance, this method ought to return a TrustService from a ThreadLocal variable that is available as a singleton in Session scope.
+	 */
+	private DatasourceTrustService getTrustService() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	private void doMerge(MergeInfo mergeInfo, JsonNode requestObject, ArrayNode annotations, PersonKeys keys) {
+		
+		ObjectMapper objectMapper = mergeInfo.getObjectMapper();
+		Iterator<String> fieldNames = requestObject.fieldNames();
+		String dateModifiedValue = mergeInfo.getReceivedAtTime();
+		String dataSourceValue = mergeInfo.getReceivedFrom();
+		
+		while (fieldNames.hasNext()) {
+			String fieldName = fieldNames.next();
+			JsonNode requestValue = requestObject.get(fieldName);
+			
+			if (fieldName.equals("identity")) {
+				// Special handling for "identity" object
+				
+				ArrayNode identityArray = (ArrayNode) requestValue;
+				for (int i=0; i<identityArray.size(); i++) {
+					ObjectNode identityObject = (ObjectNode) identityArray.get(i);
+					String identityProviderValue = identityObject.get("identityProvider").asText();
+					String identifierValue = identityObject.get("identifier").asText();
+					
+					ObjectNode annotationNode = annotatedIdentity(annotations, identityProviderValue, identifierValue);
+					if (annotationNode == null) {
+						// There is no existing annotated Identity, so create a new annotated value and add it to the list.
+						ObjectNode value = objectMapper.createObjectNode();
+						value.put("identifier", identifierValue);
+						value.put("identityProvider", identityProviderValue);
+						addAnnotation(mergeInfo, annotations, "identity", value);
+						
+					} else if (overwrite(mergeInfo, annotationNode)) {
+						// There is an existing annotated Identity
+						
+						ObjectNode identityNode = (ObjectNode) annotationNode.get("value");
+						identityNode.put("identifier", identifierValue);
+						annotationNode.put("dateModified", dateModifiedValue);
+						annotationNode.put("dataSource", dataSourceValue);
+						
+					}
+				}
+				
+				
+			} else if ("email".equals(fieldName)) {
+				// Special handling for "email" object 
+				
+				ArrayNode emailArray = (ArrayNode) requestValue;
+				for (int i=0; i<emailArray.size(); i++) {
+					String requestEmail = emailArray.get(i).asText();
+					ObjectNode annotationNode = annotatedEmail(annotations, requestEmail);
+
+					JsonNode emailValue = JsonNodeFactory.instance.textNode(requestEmail);
+					
+					if (annotationNode == null) {
+						// There is no existing record of the given email address, so add a new annotated record.
+						addAnnotation(mergeInfo, annotations, "email", emailValue);
+						
+					} else if (overwrite(mergeInfo, annotationNode)) {
+						annotationNode.set("value", emailValue);
+						annotationNode.put("dateModified", dateModifiedValue);
+						annotationNode.put("dataSource", dataSourceValue);
+						
+					}
+				}
+				
+			} else {
+				
+				ObjectNode annotationNode = getAnnotationNode(annotations, fieldName);
+				JsonNode fieldValue = copy(requestValue);
+				if (annotationNode == null) {
+					addAnnotation(mergeInfo, annotations, fieldName, fieldValue);
+				} else if (overwrite(mergeInfo, annotationNode)){
+					annotationNode.set("value", fieldValue);
+					annotationNode.put("dateModified", dateModifiedValue);
+					annotationNode.put("dataSource", dataSourceValue);
+				}
+			}
+		}
+
+		// TODO: Save the updated record to the database.
+		
+		// TODO: Add direct identifiers (email and Identity objects) to the supplied PersonKeys object.
+		
+		
+	}
+
+
+	private JsonNode copy(JsonNode requestValue) {
+		switch(requestValue.getNodeType()) {
+		case BOOLEAN :
+			return JsonNodeFactory.instance.booleanNode(requestValue.booleanValue());
+			
+		case NUMBER :
+			return requestValue.canConvertToLong() ? 
+				JsonNodeFactory.instance.numberNode(requestValue.longValue()) :
+				JsonNodeFactory.instance.numberNode(requestValue.doubleValue());
+				
+		case STRING :
+			return JsonNodeFactory.instance.textNode(requestValue.asText());
+			
+		default:
+			break;
+		}
+		
+		throw new HttpClientErrorException(HttpStatus.BAD_REQUEST, "Invalid JSON");
+	}
+
+
+
+	private ObjectNode getAnnotationNode(ArrayNode annotations, String fieldName) {
+		for (int i=0; i<annotations.size(); i++) {
+			JsonNode node = annotations.get(i);
+			String propertyName = node.get("property").asText();
+			if (propertyName.equals(fieldName)) {
+				return (ObjectNode) node;
+			}
+		}
+		return null;
+	}
+
+
+
+	/**
+	 * Search a given array of annotations for a JSON Object whose "property" field has the value "email"
+	 * and whose "value" field matches the given <code>requestEmail</code>
+	 * @param annotations  The array of existing annotations.
+	 * @param requestEmail The email address to be matched.
+	 * @return The ObjectNode for the specified requestEmail, or null if no such node is found.
+	 */
+	private ObjectNode annotatedEmail(ArrayNode annotations, String requestEmail) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+
+
+
+
+
+
+
+	private boolean overwrite(MergeInfo mergeInfo, JsonNode annotationValue) {
+		String receivedFrom = mergeInfo.getReceivedFrom();
+		String dataSource = annotationValue.get("dataSource").asText();
+		if (receivedFrom.equals(dataSource)) {
+			return true;
+		}
+		
+		double dataSourceTrustLevel = mergeInfo.getTrustService().getTrustLevel(dataSource);
+		double receivedFromTrustLevel = mergeInfo.getReceivedFromTrustLevel();
+		
+		return receivedFromTrustLevel > dataSourceTrustLevel;
+	}
+
+
+
+
+
+
+
+
+	private void addAnnotation(MergeInfo mergeInfo, ArrayNode annotationList, String fieldName, JsonNode fieldValue) {
+		ObjectMapper mapper = mergeInfo.getObjectMapper();
+		
+		ObjectNode annotation = mapper.createObjectNode();
+		annotation.put("property", fieldName);
+		annotation.set("value", fieldValue);
+		annotation.put("dateModified", mergeInfo.getReceivedAtTime());
+		annotation.put("dataSource", mergeInfo.getReceivedFrom());
+		
+		annotationList.add(annotation);
+		
+		
+	}
+
+
+
+
+
+
+
+	/**
+	 * Search a given array of annotations for a JSON Object whose "property" field has the value "identity"
+	 * and whose "value" field is an identity object where the identityProvider and identifier match the supplied values.
+	 */
+	private ObjectNode annotatedIdentity(JsonNode annotations, String identityProvider, String identifier) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+
+	/**
+	 * Insert a new record for the given person.
+	 */
+	private PersonKeys insert(PersonWithMetadata metaPerson) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+
+
+
+	private PersonData loadPersonData(PersonWithMetadata metaPerson) {
+		
+
+		StringBuilder sb=new StringBuilder("SELECT distinct a.PERSON_DATA, a.ANNOTATED_PERSON_DATA, a.PSEUDONYM");
+		sb.append("from DE_IDENTIFICATION.PERSON AS a ");
+		sb.append("INNER JOIN DE_IDENTIFICATION.PERSON_IDENTITY As b ON a.PSEUDONYM= b.PERSON_PSEUDONYM  ");
+		sb.append("AND ");
+		
+		JsonNode personNode = metaPerson.getPerson();
+		
+		
+		List<String> argList = new ArrayList<>();
+		
+		
+		List<Identity> arg1List = new ArrayList<>();
+		
+		// Scan email list
+		
+		JsonNode emailNode = personNode.get("email");
+		if (emailNode instanceof ArrayNode) {
+			for (int i=0; i<emailNode.size(); i++) {
+				String emailValue = emailNode.get(i).asText();
+				Identity id = new Identity(URN_EMAIL, emailValue);
+				arg1List.add(id);
+			}
+		}
+		
+		
+		// Scan identity list
+		JsonNode identityList = personNode.get("identity");
+		if (identityList instanceof ArrayNode) {
+			for (int i=0; i<identityList.size(); i++) {
+				JsonNode identity = identityList.get(i);
+				String identifier = identity.get("identifier").asText();
+				String identityProvider = identity.get("identityProvider").asText();
+				argList.add(identifier);
+				argList.add(identityProvider);
+			}
+		}
+		
+		if (arg1List.isEmpty()) {
+			throw new HttpClientErrorException(HttpStatus.BAD_REQUEST, "Person record must contain at least one email or one nested identity record");
+		}
+		if (arg1List.size() > 2) {
+			sb.append('(');
+		}
+		String or = "";
+		for (int i=0; i<arg1List.size()/2; i++) {
+			sb.append(or);
+			or = " OR ";
+			sb.append('(');
+			sb.append("identifier=?");
+			sb.append(" AND identityProvider=?");
+			sb.append(')');
+		}
+
+		if (arg1List.size() > 1) {
+			sb.append(')');
+		}
+		
+		
+		String sql = sb.toString();
+		Object[] args = argList.toArray();
+		int[] argTypes = new int[args.length];
+		Arrays.fill(argTypes, java.sql.Types.VARCHAR);
+		
+		RowMapper<PersonData> rowMapper = new PersonDataRowMapper();
+	
+		List<PersonData> pojoList = template.query(sql, args, argTypes, rowMapper);
+		
+		
+		return pojoList.isEmpty() ? null : pojoList.get(0);
+	}
+	
+	private static class PersonDataRowMapper implements RowMapper<PersonData> {
+
+		@Override
+		public PersonData mapRow(ResultSet resultSet, int rowNum) throws SQLException {
+			String pseudonym = resultSet.getString("PSEUDONYM");
+			String personData = resultSet.getString("PERSON_DATA");
+			String annotatedPersonData = resultSet.getString("ANNOTATED_PERSON_DATA");
+			
+			PersonData result = new PersonData();
+			result.setPseudonym(pseudonym);
+			result.setPerson(personData);
+			result.setAnnotated_person(annotatedPersonData);
+			
+			
+			return result;
+		}
+		
+	}
+	
+	private static class MergeInfo {
+		private ObjectMapper objectMapper;
+		private String receivedAtTime;
+		private String receivedFrom;
+		private double receivedFromTrustLevel;
+		private DatasourceTrustService trustService;
+		
+		
+		
+
+		public MergeInfo(
+				ObjectMapper objectMapper, String receivedAtTime, String receivedFrom, double receivedFromTrustLevel,
+				DatasourceTrustService trustService) {
+			super();
+			this.objectMapper = objectMapper;
+			this.receivedAtTime = receivedAtTime;
+			this.receivedFrom = receivedFrom;
+			this.receivedFromTrustLevel = receivedFromTrustLevel;
+			this.trustService = trustService;
+		}
+
+
+
+
+		public double getReceivedFromTrustLevel() {
+			return receivedFromTrustLevel;
+		}
+
+
+
+
+		public String getReceivedAtTime() {
+			return receivedAtTime;
+		}
+
+
+
+
+		public String getReceivedFrom() {
+			return receivedFrom;
+		}
+
+
+
+
+		public DatasourceTrustService getTrustService() {
+			return trustService;
+		}
+
+
+
+
+		public ObjectMapper getObjectMapper() {
+			return objectMapper;
+		}
+
+		
+		
+	}
 
 	public List<PersonKeys> put(Person person, String version) throws Exception {
 		ArrayNode tagsArray = (ArrayNode) person.getPerson().findValue("data");
