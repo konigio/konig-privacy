@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
 
+import org.springframework.web.client.HttpClientErrorException;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.github.fge.jsonschema.core.exceptions.ProcessingException;
@@ -36,6 +38,8 @@ public interface PersonService {
 	 * @throws ProcessingException 
 	 */
 	List<PersonKeys> post(Person person, String version) throws ProcessingException, IOException, Exception;
+	
+	public PersonKeys postSensitivePII(PersonWithMetadata metaPerson) throws HttpClientErrorException, IOException,Exception;
 	
 	/**
 	 * Stream a JSON representation of the Personal Information for a specific individual.
