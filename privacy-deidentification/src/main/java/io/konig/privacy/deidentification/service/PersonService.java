@@ -3,6 +3,11 @@ package io.konig.privacy.deidentification.service;
 import java.io.IOException;
 import java.io.PrintWriter;
 
+import org.springframework.web.client.HttpClientErrorException;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+
 import io.konig.privacy.deidentification.model.PersonKeys;
 import io.konig.privacy.deidentification.model.PersonWithMetadata;
 
@@ -22,12 +27,12 @@ public interface PersonService {
 	 * This method merges the supplied description of the Person with any prior information that might have 
 	 * been posted earlier.
 	 * 
-	 * @param person  A JSON description of the person decorated with metadata.  The JSON description must include
+	 * @param metaPerson  A JSON description of the person decorated with metadata.  The JSON description must include
 	 * at least one key for the person.
 	 * 
 	 * @return The pseudonym assigned to the person.  If no pseudonym was previously assigned, one will be generated.
-	 */
-	String post(PersonWithMetadata person);
+	 */	
+	public PersonKeys postSensitivePII(PersonWithMetadata metaPerson) throws HttpClientErrorException, IOException,Exception;
 	
 	/**
 	 * Stream a JSON representation of the Personal Information for a specific individual.
@@ -50,5 +55,16 @@ public interface PersonService {
 	 * @throws IOException
 	 */
 	boolean streamAnnotatedPersonalInformation(PersonKeys keys, PrintWriter writer) throws IOException;
+	
+	/**
+	 * To get annotated Sensitive for the specific person
+	 * @param version
+	 * @param pseudonym
+	 * @return
+	 * @throws DataAccessException
+	 * @throws IOException 
+	 * @throws JsonProcessingException 
+	 */
+	public JsonNode getAnnotatedSensitivePII(String version,String pseudonym) throws DataAccessException, JsonProcessingException, IOException;
 
 }

@@ -1,5 +1,7 @@
 package io.konig.privacy.deidentification.model;
 
+import java.util.Objects;
+
 /**
  * An object that encapsulates the identifier for a specific Person within the context of a given Identity Provider.
  * @author Greg McFall
@@ -36,7 +38,22 @@ public class Identity {
 		return identifier;
 	}
 	
+	@Override
+    public boolean equals(Object o) {
+
+		if (o == this)
+			return true;
+		if (!(o instanceof Identity)) {
+			return false;
+		}
+		Identity identity = (Identity) o;
+		return identity.getIdentityProvider().equals(identityProvider) && identity.getIdentifier().equals(identifier);
+	}
 	
+	@Override
+    public int hashCode() {
+        return Objects.hash(identityProvider, identifier);
+    }
 	
 	
 }
