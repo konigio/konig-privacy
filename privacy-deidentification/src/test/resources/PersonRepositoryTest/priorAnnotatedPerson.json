@@ -1,0 +1,19 @@
+{
+	"graph" : [{
+		"property" : "givenName",
+		"value" : "alice",
+    "dateModified" : "2018-01-01T08:00.000Z",
+    "dataSource" : "http://untrustedDatasource.com/"
+	}, {
+    "property" : "email",
+    "value" : "alice.jones@example.com",
+    "dateModified" : "2018-01-01T08:00.000Z",
+    "dataSource" : "http://untrustedDatasource.com/"
+  }, {
+  	"property" : "identity",
+  	"value" : {
+  		"identifier" : "AliceJones",
+  		"identityProvider" : "http://priorIdentityProvider.com"
+  	}
+  }]
+}

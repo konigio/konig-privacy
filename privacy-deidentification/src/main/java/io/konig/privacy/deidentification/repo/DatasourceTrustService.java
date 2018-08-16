@@ -7,5 +7,6 @@ package io.konig.privacy.deidentification.repo;
  */
 public interface DatasourceTrustService {
 
+	public static final ThreadLocal<DatasourceTrustService> instance = new ThreadLocal<>();
 	double getTrustLevel(String datasourceId);
 }

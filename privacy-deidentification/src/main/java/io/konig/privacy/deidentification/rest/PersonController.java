@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -29,6 +30,8 @@ import io.konig.privacy.deidentification.model.Metadata;
 import io.konig.privacy.deidentification.model.PersonKeys;
 import io.konig.privacy.deidentification.model.PersonWithMetadata;
 import io.konig.privacy.deidentification.model.Provenance;
+import io.konig.privacy.deidentification.repo.DatasourceTrustService;
+import io.konig.privacy.deidentification.repo.DatasourceTrustServiceImpl;
 import io.konig.privacy.deidentification.service.DataModelService;
 import io.konig.privacy.deidentification.service.PersonService;
 import io.konig.privacy.deidentification.utils.ValidationUtils;
@@ -36,6 +39,7 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiResponse;
 import io.swagger.annotations.ApiResponses;
+import net.spy.memcached.MemcachedClient;
 
 @RestController
 @RequestMapping(value = { "/api" })
@@ -49,6 +53,12 @@ public class PersonController {
 	DataModelService dataModelService;
 
 	@Autowired
+	JdbcTemplate template;
+
+	@Autowired
+	MemcachedClient cache;
+
+	@Autowired
 	private Environment env;
 
 	@ApiOperation(value = "API to get pseudonyms for a batch of people", response = PersonKeys.class)
@@ -60,22 +70,19 @@ public class PersonController {
 	public ResponseEntity<List<PersonKeys>> postSensitivePII(@PathVariable("version") String version,
 			@RequestBody String strBody) throws Exception {
 		List<PersonKeys> personKeyList = new ArrayList<PersonKeys>();
-		List<PersonKeys> personList = new ArrayList<PersonKeys>();
 		ObjectMapper mapper = new ObjectMapper();
-		PersonWithMetadata personWithMetaData = new PersonWithMetadata();
+		
+		DatasourceTrustService.instance.set(new DatasourceTrustServiceImpl(template, cache, env));
+		
+		try {
 
-		JsonNode actualObj = mapper.readTree(strBody);
-		String baseURL = env.getProperty("baseURL");
-		PersonKeys keys = new PersonKeys();
-		ArrayNode tagsArray = (ArrayNode) actualObj.findValue("data");
-		String tempVersion = version.substring(1);
-		JsonNode jsonSchema = dataModelService.getSchemaByVersion(tempVersion);
-		for (int i = 0; i < tagsArray.size(); i++) {
-			JsonNode objectValue = (ObjectNode) tagsArray.get(i);
-			if (!ValidationUtils.isJsonValid(jsonSchema.toString(), objectValue.toString())) {
-				throw new Exception("Schema Validation Failed. Invalid Person data");
-			}
-			personWithMetaData.setPerson(objectValue);
+			JsonNode actualObj = mapper.readTree(strBody);
+			String baseURL = env.getProperty("baseURL");
+			PersonKeys keys = new PersonKeys();
+			ArrayNode personArray = (ArrayNode) actualObj.findValue("data");
+			String tempVersion = version.substring(1);
+			JsonNode jsonSchema = dataModelService.getSchemaByVersion(tempVersion);
+
 			Metadata metaData = new Metadata();
 			DataModel dataModel = new DataModel();
 			dataModel.setVersion(version);
@@ -89,30 +96,36 @@ public class PersonController {
 
 			provenance.setReceivedAtTime(gregoriancalendar);
 			metaData.setProvenance(provenance);
-			personWithMetaData.setMetadata(metaData);
-			keys = personService.postSensitivePII(personWithMetaData);
-			personKeyList.add(keys);
-		}
-		// personKeyList = personService.post(person, version);
-		for (int k = 0; k < personKeyList.size(); k++) {
-			PersonKeys personkeys = new PersonKeys();
-			personkeys.setPseudonym(personKeyList.get(k).getPseudonym());
-			PropertyUtils.setSimpleProperty(personkeys, "id", baseURL + personKeyList.get(k).getPseudonym());
-			List<String> email = new ArrayList<String>();
-			List<Identity> identityList = new ArrayList<Identity>();
-			for (int j = 0; j < personKeyList.get(k).getEmail().size(); j++) {
-				email.add(personKeyList.get(k).getEmail().get(j));
+			
+			
+			// This solution iterates through each Person in the batch and makes a separate call to the 
+			// database via personService.
+			
+			// This is necessary because PersonService only has methods for operating on one person at a time.
+			
+			// TODO:  Consider refactoring the solution so that the PersonService can operate on a batch of values with a single
+			// call to the database (or a small number of calls).  
+			
+			// We should perform this refactoring only if performance tests demand it.
+			
+
+			PersonWithMetadata personWithMetaData = new PersonWithMetadata();
+			
+			for (int i = 0; i < personArray.size(); i++) {
+				ObjectNode personObjectNode = (ObjectNode) personArray.get(i);
+				if (!ValidationUtils.isJsonValid(jsonSchema.toString(), personObjectNode.toString())) {
+					throw new Exception("Schema Validation Failed. Invalid Person data");
+				}
+				personWithMetaData.setPerson(personObjectNode);
+				personWithMetaData.setMetadata(metaData);
+				keys = personService.postSensitivePII(personWithMetaData);
+				keys.setId(baseURL + keys.getPseudonym());
+				personKeyList.add(keys);
 			}
-			for (int z = 0; z < personKeyList.get(k).getIdentity().size(); z++) {
-				Identity identity = new Identity(personKeyList.get(k).getIdentity().get(z).getIdentityProvider(),
-						personKeyList.get(k).getIdentity().get(z).getIdentifier());
-				identityList.add(identity);
-			}
-			personkeys.setEmail(email);
-			personkeys.setIdentity(identityList);
-			personList.add(personkeys);
+			return new ResponseEntity<List<PersonKeys>>(personKeyList, HttpStatus.CREATED);
+		} finally {
+			DatasourceTrustService.instance.remove();
 		}
-		return new ResponseEntity<List<PersonKeys>>(personList, HttpStatus.CREATED);
 	}
 
 	@RequestMapping(value = "/privacy/{version}/person/{pseudonym}/.annotated", method = RequestMethod.GET)

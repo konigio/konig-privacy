@@ -2,8 +2,6 @@ package io.konig.privacy.deidentification.service;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -11,12 +9,13 @@ import org.springframework.web.client.HttpClientErrorException;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.github.fge.jsonschema.core.exceptions.ProcessingException;
 
-import io.konig.privacy.deidentification.model.Person;
 import io.konig.privacy.deidentification.model.PersonKeys;
 import io.konig.privacy.deidentification.model.PersonWithMetadata;
 import io.konig.privacy.deidentification.repo.PersonRepository;
+
+
+// TODO:  Consider eliminating PersonServiceImpl.  Shouldn't we make PersonRepository implement the PersonService interface?
 
 @Service
 public class PersonServiceImpl implements PersonService {
@@ -24,14 +23,6 @@ public class PersonServiceImpl implements PersonService {
 	@Autowired
 	PersonRepository personRepository;
 
-	@Override
-	public List<PersonKeys> post(Person person, String version)
-			throws ProcessingException, IOException, Exception {
-		// TODO Auto-generated method stub
-		List<PersonKeys> personKeyList = new ArrayList<PersonKeys>();
-		personKeyList = personRepository.put(person, version);
-		return personKeyList;
-	}
 	@Override
 	public PersonKeys postSensitivePII(PersonWithMetadata metaPerson) throws HttpClientErrorException, IOException,Exception{
 		PersonKeys keys=personRepository.put(metaPerson);

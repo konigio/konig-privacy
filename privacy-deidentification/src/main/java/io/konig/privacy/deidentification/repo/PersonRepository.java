@@ -7,12 +7,13 @@ import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.GregorianCalendar;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
-import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang.RandomStringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +24,7 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -32,16 +34,12 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 
-import io.konig.privacy.deidentification.model.DatasourceData;
-import io.konig.privacy.deidentification.model.DatasourceDataRowMapper;
+import io.konig.privacy.deidentification.model.EnvironmentConstants;
 import io.konig.privacy.deidentification.model.Identity;
-import io.konig.privacy.deidentification.model.Person;
 import io.konig.privacy.deidentification.model.PersonData;
 import io.konig.privacy.deidentification.model.PersonKeys;
-import io.konig.privacy.deidentification.model.PersonRowMapper;
 import io.konig.privacy.deidentification.model.PersonWithMetadata;
 import io.konig.privacy.deidentification.model.Provenance;
-import net.spy.memcached.MemcachedClient;
 
 @Repository
 @Transactional
@@ -50,20 +48,31 @@ public class PersonRepository {
 	final static SecureRandom secureRandom = new SecureRandom();
 	private final static String URN_EMAIL = "urn:email";
 	
-	private static  ThreadLocal<DatasourceTrustServiceimpl> instance =new ThreadLocal<DatasourceTrustServiceimpl>();
+	@Autowired 
+	Environment env;
 
 	@Autowired
 	JdbcTemplate template;
 	
-
-	@Autowired
-    MemcachedClient cache;
-	
-	@Autowired
-	private Environment env;
+	private String pseudonymPrefix;
 	
 	private SimpleDateFormat isoTimestampFormat =  new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
 	
+	public PersonRepository() {
+	}
+	
+	public PersonRepository(Environment env, JdbcTemplate template) {
+		this.template = template;
+		this.env = env;
+	}
+	
+	
+
+	public JdbcTemplate getJdbcTemplate() {
+		return template;
+	}
+
+
 	public PersonKeys put(PersonWithMetadata metaPerson) throws HttpClientErrorException, IOException,Exception {
 		PersonKeys keys = null;
 		
@@ -115,28 +124,31 @@ public class PersonRepository {
 
 	/**
 	 * Get a TrustService implementation that wraps a local hash map cache, plus memcache, and ultimately defaults to a database lookup.
-	 * For best performance, this method ought to return a TrustService from a ThreadLocal variable that is available as a singleton in Session scope.
+	 * This is a convenience method equivalent to <code>DatasourceTrustService.instance.get()<code>.
 	 */
 	private DatasourceTrustService getTrustService() {
-		// TODO Auto-generated method stub
-		DatasourceTrustServiceimpl trustService= new DatasourceTrustServiceimpl();
-		instance.set(trustService);				
-		return instance.get();
-		//return trustService;		
+		return DatasourceTrustService.instance.get();		
 	}
 
 	private void doMerge(MergeInfo mergeInfo, JsonNode requestObject, ArrayNode annotations, PersonKeys keys) {
+		
+		// TODO: The logic for inserting vs. updating records in the PERSON_IDENTITY table is not correct.
+		// Greg will fix this later.
 		
 		ObjectMapper objectMapper = mergeInfo.getObjectMapper();
 		Iterator<String> fieldNames = requestObject.fieldNames();
 		String dateModifiedValue = mergeInfo.getReceivedAtTime();
 		String dataSourceValue = mergeInfo.getReceivedFrom();
 		
-		List<String> emailList = new ArrayList<String>();
+		LinkedHashSet<String> emailSet = new LinkedHashSet<>();
+		LinkedHashMap<String, Identity> identityMap = new LinkedHashMap<>();
+		
 		List<Identity> identityList = new ArrayList<Identity>();
 		
 		List<String> diffEmailList = new ArrayList<String>();
 		List<Identity> diffIdentityList = new ArrayList<Identity>();
+		
+		collectDirectIdentifiers(emailSet, identityMap, annotations);
 		
 		while (fieldNames.hasNext()) {
 			String fieldName = fieldNames.next();
@@ -150,6 +162,7 @@ public class PersonRepository {
 					String identityProviderValue = identityObject.get("identityProvider").asText();
 					String identifierValue = identityObject.get("identifier").asText();
 					ObjectNode annotationNode = annotatedIdentity(annotations, identityProviderValue, identifierValue);
+					
 					if (annotationNode == null) {
 						// There is no existing annotated Identity, so create a new annotated value and add it to the list.
 						ObjectNode value = objectMapper.createObjectNode();
@@ -159,6 +172,8 @@ public class PersonRepository {
 						Identity identity = new Identity(identityProviderValue, identifierValue);
 						identityList.add(identity);
 						diffIdentityList.add(identity);
+						
+						identityMap.put(identityProviderValue, identity);
 						
 					} else if (overwrite(mergeInfo, annotationNode)) {
 						// There is an existing annotated Identity
@@ -178,6 +193,8 @@ public class PersonRepository {
 				ArrayNode emailArray = (ArrayNode) requestValue;
 				for (int i=0; i<emailArray.size(); i++) {
 					String requestEmail = emailArray.get(i).asText();
+					emailSet.add(requestEmail);
+					
 					ObjectNode annotationNode = annotatedEmail(annotations, requestEmail);
 
 					JsonNode emailValue = JsonNodeFactory.instance.textNode(requestEmail);
@@ -185,14 +202,11 @@ public class PersonRepository {
 					if (annotationNode == null) {
 						// There is no existing record of the given email address, so add a new annotated record.
 						addAnnotation(mergeInfo, annotations, "email", emailValue);
-						emailList.add(emailValue.asText());
 						diffEmailList.add(emailValue.asText());
 					} else if (overwrite(mergeInfo, annotationNode)) {
 						annotationNode.set("value", emailValue);
 						annotationNode.put("dateModified", dateModifiedValue);
 						annotationNode.put("dataSource", dataSourceValue);
-						emailList.add(emailValue.asText());
-						
 					}
 				}
 				
@@ -209,13 +223,14 @@ public class PersonRepository {
 				}
 			}
 		}
+		
+		JdbcTemplate template = getJdbcTemplate();
 
-		// TODO: Save the updated record to the database.
 		String updateQuery = "UPDATE DE_IDENTIFICATION.PERSON SET  ANNOTATED_PERSON_DATA=? WHERE PSEUDONYM=?";
 		template.update(updateQuery, annotations.toString(), keys.getPseudonym());
 		
 
-		//This block is for adding new email and Identity elements recieved during Merge
+		//This block is for adding new email and Identity elements received during Merge
 		for(int z=0;z<ListUtils.emptyIfNull(diffEmailList).size();z++){
 			String queryEmail = "INSERT INTO  DE_IDENTIFICATION.PERSON_IDENTITY (PERSON_PSEUDONYM, IDENTITY_PROVIDER,IDENTIFIER) VALUES (?,?,?)";
 			template.update(queryEmail, keys.getPseudonym(),"urn:email" ,diffEmailList.get(z));
@@ -226,13 +241,39 @@ public class PersonRepository {
 			template.update(queryIdentity, keys.getPseudonym(),diffIdentityList.get(y).getIdentityProvider() ,diffIdentityList.get(y).getIdentifier());
 		}
 		
-		// TODO: Add direct identifiers (email and Identity objects) to the supplied PersonKeys object.
+		List<String> emailList = new ArrayList<>(emailSet);
+		
 		keys.setEmail(emailList);
 		keys.setIdentity(identityList);
 		
 		
 	}
 
+
+	private void collectDirectIdentifiers(
+		Set<String> emailSet,
+		Map<String, Identity> identityMap, 
+		ArrayNode annotations
+	) {
+		for (int i=0; i<annotations.size(); i++) {
+			ObjectNode element = (ObjectNode) annotations.get(i);
+			
+			String propertyName = element.get("property").asText();
+			if (propertyName.equals("email")) {
+				String value = element.get("value").asText();
+				emailSet.add(value);
+			} else if (propertyName.equals("identity")) {
+				ObjectNode node = (ObjectNode) element.get("value");
+				String identifier = node.get("identifier").asText();
+				String identityProvider = node.get("identityProvider").asText();
+				
+				identityMap.put(identityProvider, new Identity(identityProvider, identifier));
+			}
+			
+			
+		}
+		
+	}
 
 	private JsonNode copy(JsonNode requestValue) {
 		switch(requestValue.getNodeType()) {
@@ -247,11 +288,44 @@ public class PersonRepository {
 		case STRING :
 			return JsonNodeFactory.instance.textNode(requestValue.asText());
 			
+		case OBJECT :
+			return copyObject((ObjectNode) requestValue);
+			
+		case ARRAY :
+			return copyArray((ArrayNode)requestValue);
+			
 		default:
 			break;
 		}
 		
 		throw new HttpClientErrorException(HttpStatus.BAD_REQUEST, "Invalid JSON");
+	}
+
+
+
+	private JsonNode copyArray(ArrayNode array) {
+		ArrayNode copy = JsonNodeFactory.instance.arrayNode();
+		for (int i=0; i<array.size(); i++) {
+			JsonNode element = array.get(i);
+			copy.add(copy(element));
+		}
+		
+		return copy;
+	}
+
+
+
+	private JsonNode copyObject(ObjectNode object) {
+		ObjectNode copy = JsonNodeFactory.instance.objectNode();
+		Iterator<String> sequence = object.fieldNames();
+		while (sequence.hasNext()) {
+			String fieldName = sequence.next();
+			JsonNode fieldValue = object.get(fieldName);
+			JsonNode fieldValueCopy = copy(fieldValue);
+			copy.set(fieldName, fieldValueCopy);
+		}
+		
+		return copy;
 	}
 
 
@@ -346,7 +420,7 @@ public class PersonRepository {
 	private PersonKeys insert(PersonWithMetadata metaPerson) throws Exception {
 		// TODO Auto-generated method stub
 		
-		String pseudonym = randomString(30);
+		String pseudonym = generatePseudonym();
 		PersonKeys keys=new PersonKeys();
 		keys.setPseudonym(pseudonym);
 		String dataSourceId = metaPerson.getMetadata().getProvenance().getReceivedFrom();
@@ -379,7 +453,25 @@ public class PersonRepository {
 		keys.setIdentity(identityList);;
 		return keys;
 	}
+	
+	private String pseudonymPrefix() {
+		if (pseudonymPrefix == null) {
+			String name = env.getProperty(EnvironmentConstants.SERVICE_INSTANCE_ID);
+			if (name == null) {
+				throw new HttpServerErrorException(
+						HttpStatus.INTERNAL_SERVER_ERROR, 
+						EnvironmentConstants.SERVICE_INSTANCE_ID +" configuration parameter is not defined");
+			}
+			pseudonymPrefix = name + "-";
+		}
+		return pseudonymPrefix;
+	}
 
+
+	private String generatePseudonym() {
+		String random = randomString(30);
+		return pseudonymPrefix() + random;
+	}
 
 	private PersonData loadPersonData(PersonWithMetadata metaPerson) {
 		StringBuilder sb=new StringBuilder("SELECT distinct a.PERSON_DATA, a.ANNOTATED_PERSON_DATA, a.PSEUDONYM");
@@ -436,8 +528,8 @@ public class PersonRepository {
 		
 		String or = "";
 		for (int i=0; i<argList.size()/2; i++) {
-			if(arg1List.size()>0)
-				sb.append(" OR ");			
+			sb.append(or);
+			or = " OR ";		
 			sb.append('(');
 			sb.append(" b.IDENTIFIER=?");
 			sb.append(" AND b.IDENTITY_PROVIDER=?");
@@ -490,7 +582,7 @@ public class PersonRepository {
 		return identityList;
 	}
 	
-	private static class PersonDataRowMapper implements RowMapper<PersonData> {
+	static class PersonDataRowMapper implements RowMapper<PersonData> {
 
 		@Override
 		public PersonData mapRow(ResultSet resultSet, int rowNum) throws SQLException {
@@ -573,106 +665,7 @@ public class PersonRepository {
 
 	
 	
-
-	public List<PersonKeys> put(Person person, String version) throws Exception {
-		ArrayNode tagsArray = (ArrayNode) person.getPerson().findValue("data");
-		String dataSourceId = person.getPerson().findValue("datasource").textValue();
-		String trustValue = "";
-		//if(cache.get(dataSourceId) == null) {
-			//fetchDataSourceDetails(dataSourceId);
-		//}
-		//trustValue = cache.get(dataSourceId).toString();
-		List<PersonKeys> personKeyList = new ArrayList<PersonKeys>();
-		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");	
-		GregorianCalendar gregoriancalendar = new GregorianCalendar();
-		String dateModified=sdf.format(gregoriancalendar.getTime());
-		for (int i = 0; i < tagsArray.size(); i++) {
-			PersonKeys personKeys = new PersonKeys();
-			PersonData personData = null;
-			ObjectNode objectValue = (ObjectNode) tagsArray.get(i);
-			String pseudonym = null;
-
-			List<String> email = new ArrayList<String>();
-			StringBuilder sb=new StringBuilder("SELECT distinct a.PERSON_DATA, a.ANNOTATED_PERSON_DATA, a.PSEUDONYM from DE_IDENTIFICATION.PERSON AS a ");
-			sb.append("INNER JOIN DE_IDENTIFICATION.PERSON_IDENTITY As b ON a.PSEUDONYM= b.PERSON_PSEUDONYM  ");
-			sb.append("AND ");
-			email=fetchEmailList(objectValue, true, sb);
-			personKeys.setEmail(email);
-
-			List<Identity> identityList = new ArrayList<Identity>();
-			identityList=fetchIdentityList(objectValue, true, sb);
-			
-			sb.append(")");
-			personKeys.setIdentity(identityList);
-			
-			JsonNode annotedJson=createAnnotatedJson(objectValue,dataSourceId,dateModified);
-			
-			if(identifierExists(sb.toString())){				
-				PersonRowMapper personRowMapper = new PersonRowMapper();
-				personData = (PersonData) template.queryForObject(sb.toString(), personRowMapper
-						);
-				List<String> databaseEmailList=new ArrayList<String>();
-				List<Identity> databaseIdentityList = new ArrayList<Identity>();
 	
-				if (personData.getPerson() != null) {
-					ObjectMapper om = new ObjectMapper();
-					ObjectMapper annotatedObjectMapper = new ObjectMapper();
-					JsonNode simpleJsonBeforeNode = om.readTree(personData.getPerson());
-					JsonNode simpleJsonAfterNode = om.readTree(objectValue.toString());
-					JsonNode annotatedJsonBeforeNode = annotatedObjectMapper.readTree(personData.getAnnotated_person());
-					JsonNode annotatedJsonAfterNode  = annotatedObjectMapper.readTree(annotedJson.toString());
-					ObjectNode node = (ObjectNode) new ObjectMapper().readTree(simpleJsonBeforeNode.toString());
-					databaseEmailList= fetchEmailList(node, false, sb);
-					databaseIdentityList=fetchIdentityList(node,false,sb);
-					JsonNode mergeSimpleJsonNode = merge(simpleJsonBeforeNode, simpleJsonAfterNode);
-					JsonNode mergeAnnotatedJsonNode = merge(annotatedJsonBeforeNode,annotatedJsonAfterNode);
-					
-					Collection<String> resultEmail= CollectionUtils.subtract(email, databaseEmailList);
-					Collection<Identity> resultIdentity=  CollectionUtils.subtract(identityList, databaseIdentityList);
-					List<String> finalEmailList =new ArrayList<String>(resultEmail);
-					List<Identity> finalIdentityList = new ArrayList<Identity>(resultIdentity);
-					
-					String updateQuery = "UPDATE DE_IDENTIFICATION.PERSON SET PERSON_DATA=?, ANNOTATED_PERSON_DATA=? WHERE PSEUDONYM=?";
-					template.update(updateQuery, mergeSimpleJsonNode.toString(), mergeAnnotatedJsonNode.toString(), personData.getPseudonym());
-					
-					for(int z=0;z<ListUtils.emptyIfNull(finalEmailList).size();z++){
-						String queryEmail = "INSERT INTO  DE_IDENTIFICATION.PERSON_IDENTITY (PERSON_PSEUDONYM, IDENTITY_PROVIDER,IDENTIFIER) VALUES (?,?,?)";
-						template.update(queryEmail, personData.getPseudonym(),"urn:email" ,finalEmailList.get(z));
-					}
-					
-					for(int y=0;y<ListUtils.emptyIfNull(finalIdentityList).size();y++){
-						String queryIdentity = "INSERT INTO  DE_IDENTIFICATION.PERSON_IDENTITY (PERSON_PSEUDONYM, IDENTITY_PROVIDER,IDENTIFIER) VALUES (?,?,?)";
-						template.update(queryIdentity, personData.getPseudonym(),finalIdentityList.get(y).getIdentityProvider() ,finalIdentityList.get(y).getIdentifier());
-					}
-					
-					
-					personKeys.setPseudonym(personData.getPseudonym());
-				}
-			}
-			else{
-				pseudonym = randomString(30);
-				personKeys.setPseudonym(pseudonym);
-				
-				String queryPerson = "INSERT INTO  DE_IDENTIFICATION.PERSON (DATASOURCE_ID, PERSON_DATA, ANNOTATED_PERSON_DATA,VERSION,PSEUDONYM) VALUES (?,?,?,?,?)";
-				template.update(queryPerson, dataSourceId, objectValue.toString(), annotedJson.toString(), version, pseudonym);
-				
-				
-				for(int k=0;k<ListUtils.emptyIfNull(email).size();k++){
-					String queryPersonIdentity = "INSERT INTO  DE_IDENTIFICATION.PERSON_IDENTITY (PERSON_PSEUDONYM, IDENTITY_PROVIDER,IDENTIFIER) VALUES (?,?,?)";
-					template.update(queryPersonIdentity, pseudonym, "urn:email" ,email.get(k));					
-				}
-				
-				for(int l=0;l<ListUtils.emptyIfNull(identityList).size();l++){
-					String queryPersonIdentity = "INSERT INTO  DE_IDENTIFICATION.PERSON_IDENTITY (PERSON_PSEUDONYM, IDENTITY_PROVIDER,IDENTIFIER) VALUES (?,?,?)";
-					template.update(queryPersonIdentity, pseudonym, identityList.get(l).getIdentityProvider(),identityList.get(l).getIdentifier());			
-				}
-
-			}		
-			personKeyList.add(personKeys);
-		}
-
-		return personKeyList;
-	}
 
 	public String randomString(int length) {
 		char[] format = { 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S',

@@ -1,0 +1,11 @@
+{
+	"givenName" : "Allie",
+	"email" : ["alice@example.com"],
+	"identity" : [{
+		"identifier" : "alice.jones",
+		"identityProvider" : "http://firstIdentityProvider.com"
+	}, {
+		"identifier" : "ajones",
+		"identityProvider" : "http://secondIdentityProvider.com"
+	}]
+}

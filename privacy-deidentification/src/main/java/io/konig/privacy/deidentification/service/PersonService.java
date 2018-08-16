@@ -2,15 +2,12 @@ package io.konig.privacy.deidentification.service;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.List;
 
 import org.springframework.web.client.HttpClientErrorException;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.github.fge.jsonschema.core.exceptions.ProcessingException;
 
-import io.konig.privacy.deidentification.model.Person;
 import io.konig.privacy.deidentification.model.PersonKeys;
 import io.konig.privacy.deidentification.model.PersonWithMetadata;
 
@@ -30,15 +27,11 @@ public interface PersonService {
 	 * This method merges the supplied description of the Person with any prior information that might have 
 	 * been posted earlier.
 	 * 
-	 * @param person  A JSON description of the person decorated with metadata.  The JSON description must include
+	 * @param metaPerson  A JSON description of the person decorated with metadata.  The JSON description must include
 	 * at least one key for the person.
 	 * 
 	 * @return The pseudonym assigned to the person.  If no pseudonym was previously assigned, one will be generated.
-	 * @throws IOException 
-	 * @throws ProcessingException 
-	 */
-	List<PersonKeys> post(Person person, String version) throws ProcessingException, IOException, Exception;
-	
+	 */	
 	public PersonKeys postSensitivePII(PersonWithMetadata metaPerson) throws HttpClientErrorException, IOException,Exception;
 	
 	/**
