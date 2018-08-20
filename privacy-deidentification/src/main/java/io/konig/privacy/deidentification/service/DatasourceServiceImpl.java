@@ -54,6 +54,13 @@ public class DatasourceServiceImpl implements DatasourceService{
 		datasourceRepository.deleteDatasourcebyUid(uid);
 	}
 	
+	/**
+	 * To get the user information from the datasource
+	 */
+	public String getUserDetails(String userName) throws DataAccessException{
+		String userDetails = datasourceRepository.getUserDetails(userName);
+		return userDetails;
+	}
 	
 		
 }

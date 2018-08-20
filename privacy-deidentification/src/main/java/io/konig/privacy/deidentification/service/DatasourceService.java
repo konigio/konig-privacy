@@ -38,4 +38,6 @@ public interface DatasourceService {
 	 * @throws DataAccessException
 	 */
 	public void deleteDatasourceByUid (String Uid) throws DataAccessException;
+	 
+	public String getUserDetails (String userName) throws DataAccessException;
 }

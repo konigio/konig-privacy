@@ -125,6 +125,17 @@
 		    <artifactId>spymemcached</artifactId>
 		    <version>2.12.3</version>
 		</dependency>
+			<dependency>
+		    <groupId>org.springframework.boot</groupId>
+		    <artifactId>spring-boot-starter-security</artifactId>
+		    <version>2.0.4.RELEASE</version>
+		</dependency>
+		<dependency>
+				<groupId>commons-codec</groupId>
+				<artifactId>commons-codec</artifactId>
+			<version>1.11</version>
+		</dependency>
+	
   </dependencies>
 
 	<build>
@@ -154,7 +165,7 @@
 				</executions>
 			</plugin>
 			
-			<plugin>
+		 	<plugin>
 				<groupId>io.fabric8</groupId>
 				<artifactId>docker-maven-plugin</artifactId>
 				<version>0.24.0</version>			
@@ -190,7 +201,7 @@
 						</goals>
 					</execution>
 				</executions>						
-			</plugin> 												
+			</plugin>  												
 		</plugins>
 	</build>
   
