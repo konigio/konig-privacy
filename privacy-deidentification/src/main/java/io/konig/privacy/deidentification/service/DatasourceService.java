@@ -39,5 +39,4 @@ public interface DatasourceService {
 	 */
 	public void deleteDatasourceByUid (String Uid) throws DataAccessException;
 	 
-	public String getUserDetails (String userName) throws DataAccessException;
 }

@@ -147,10 +147,4 @@ public class DatasourceRepository {
 		return datasourceData;
 	}
 
-	public String getUserDetails(String userName) {
-		String sha2Password = null;
-		String query = "SELECT sha2Password from USER_AUTHENTICATION where username = ?";
-		sha2Password = template.queryForObject(query, String.class, userName);
-		return sha2Password;
-	}
 }
