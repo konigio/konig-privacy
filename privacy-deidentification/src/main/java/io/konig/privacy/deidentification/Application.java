@@ -42,7 +42,6 @@ public class Application  {
 	 @Bean(value = "datasource")
 	    @ConfigurationProperties("spring.datasource")
 	    public DataSource dataSource() {
-		 System.out.println("Inside datasource");
 	        return DataSourceBuilder.create().build();
 	    }
 }
