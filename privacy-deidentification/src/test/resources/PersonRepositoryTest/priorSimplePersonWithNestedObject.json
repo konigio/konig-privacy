@@ -1,0 +1,9 @@
+{
+	"email" :"alice.jones@example.com",
+	"contactPoint : {
+			"telephone" : "+1-877-746-0909",
+			"contactType" : "customer service",
+			"contactOption" : "TollFree",
+			"areaServed" : "US"
+			}
+}
