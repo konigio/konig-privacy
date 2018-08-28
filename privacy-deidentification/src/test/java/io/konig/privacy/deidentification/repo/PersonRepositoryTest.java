@@ -38,6 +38,7 @@ import io.konig.privacy.deidentification.repo.PersonRepository.PersonDataRowMapp
 
 public class PersonRepositoryTest {
 	
+	
 	@Mock
 	JdbcTemplate jdbcTemplate;
 	
