@@ -36,9 +36,7 @@ import io.konig.privacy.deidentification.model.PersonWithMetadata;
 import io.konig.privacy.deidentification.model.Provenance;
 import io.konig.privacy.deidentification.repo.PersonRepository.PersonDataRowMapper;
 
-public class PersonRepositoryTest {
-	
-	
+public class PersonRepositoryTest {	
 	@Mock
 	JdbcTemplate jdbcTemplate;
 	
