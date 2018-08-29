@@ -31,5 +31,7 @@ public interface DataModelService {
 	 * @throws DataAccessException
 	 */
 	public String put(String jsonStr) throws DataAccessException;
+	
+	public void deleteDataModel(String version) throws DataAccessException;
 
 }
