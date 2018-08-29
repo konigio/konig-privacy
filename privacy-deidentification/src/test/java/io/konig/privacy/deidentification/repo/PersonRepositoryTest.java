@@ -185,40 +185,40 @@ public class PersonRepositoryTest {
 		
 		// Verify that the first update statement was executed correctly.
 		
-		String firstUpdateSqlExpected = "UPDATE DE_IDENTIFICATION.PERSON SET  ANNOTATED_PERSON_DATA=? WHERE PSEUDONYM=?";
+		String firstUpdateSqlExpected = "UPDATE DE_IDENTIFICATION.PERSON SET  ANNOTATED_PERSON_DATA=?, PERSON_DATA=? WHERE PSEUDONYM=?";
 		
 		assertEquals(firstUpdateSqlExpected, actualUpdateSql.get(0));
 		
 		List<Object> updateArgList = updateArgCaptor.getAllValues();
-		assertEquals(11, updateArgList.size());
+		assertEquals(12, updateArgList.size());
 		
 		String annotatedPersonExpected = loadAsString("PersonRepositoryTest/expectedAnnotatedPerson.json");
 		
 		assertEquals(annotatedPersonExpected, updateArgList.get(0));
 		
-		assertEquals(pseudonymExpected, updateArgList.get(1));
+		assertEquals(pseudonymExpected, updateArgList.get(2));
 
 		// Verify that the second update statement was executed correctly
 		String insertPersonIdentity = "INSERT INTO  DE_IDENTIFICATION.PERSON_IDENTITY (PERSON_PSEUDONYM, IDENTITY_PROVIDER,IDENTIFIER) VALUES (?,?,?)";
 		assertEquals(insertPersonIdentity, actualUpdateSql.get(1));
 		
-		assertEquals(pseudonymExpected, updateArgList.get(2));
-		assertEquals("urn:email", updateArgList.get(3));
-		assertEquals("alice@example.com", updateArgList.get(4));
+		assertEquals(pseudonymExpected, updateArgList.get(3));
+		assertEquals("urn:email", updateArgList.get(4));
+		assertEquals("alice@example.com", updateArgList.get(5));
 		
 		// Verify that the third update statement was executed correctly
 
 		assertEquals(insertPersonIdentity, actualUpdateSql.get(2));
-		assertEquals(pseudonymExpected, updateArgList.get(5));
-		assertEquals("http://firstIdentityProvider.com", updateArgList.get(6));
-		assertEquals("alice.jones", updateArgList.get(7));
+		assertEquals(pseudonymExpected, updateArgList.get(6));
+		assertEquals("http://firstIdentityProvider.com", updateArgList.get(7));
+		assertEquals("alice.jones", updateArgList.get(8));
 		
 		// Verify that the fourth update statement was executed correctly
 
 		assertEquals(insertPersonIdentity, actualUpdateSql.get(3));
-		assertEquals(pseudonymExpected, updateArgList.get(8));
-		assertEquals("http://secondIdentityProvider.com", updateArgList.get(9));
-		assertEquals("ajones", updateArgList.get(10));
+		assertEquals(pseudonymExpected, updateArgList.get(9));
+		assertEquals("http://secondIdentityProvider.com", updateArgList.get(10));
+		assertEquals("ajones", updateArgList.get(11));
 		
 		
 		
@@ -272,13 +272,6 @@ public class PersonRepositoryTest {
 		ArgumentCaptor<Object> updateArgCaptor = ArgumentCaptor.forClass(Object.class);
 		
 		verify(jdbcTemplate, times(4)).update(updateSqlCaptor.capture(), updateArgCaptor.capture());
-		
-		List<String> updateSql = updateSqlCaptor.getAllValues();
-		
-		String sqlExpected = "UPDATE DE_IDENTIFICATION.PERSON SET  ANNOTATED_PERSON_DATA=? WHERE PSEUDONYM=?";
-		
-		assertEquals(sqlExpected, updateSql.get(0));
-		
 		List<Object> updateArgList = updateArgCaptor.getAllValues();
 		
 		String annotatedPersonExpected = loadAsString("PersonRepositoryTest/expectedAnnotatedPersonWithNestedObject.json");
@@ -333,19 +326,12 @@ public class PersonRepositoryTest {
 		
 		verify(jdbcTemplate, times(4)).update(updateSqlCaptor.capture(), updateArgCaptor.capture());
 		
-		List<String> updateSql = updateSqlCaptor.getAllValues();
-		
-		String sqlExpected = "UPDATE DE_IDENTIFICATION.PERSON SET  ANNOTATED_PERSON_DATA=? WHERE PSEUDONYM=?";
-		
-		assertEquals(sqlExpected, updateSql.get(0));
-		
 		List<Object> updateArgList = updateArgCaptor.getAllValues();
 		
 		String annotatedPersonExpected = loadAsString("PersonRepositoryTest/expectedAnnotatedPersonWithNestedObject1.json");
 		
 		assertEquals(annotatedPersonExpected, updateArgList.get(0));
 	}
-	
 	private String loadAsString(String path) {
 		InputStream input = getClass().getClassLoader().getResourceAsStream(path);
 		if (input == null) {
