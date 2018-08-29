@@ -20,6 +20,7 @@
 		<module>../privacy-fileinjection-maven-plugin</module>
 		<module>../privacy-deploy-maven-plugin</module>
 		<module>../privacy-deploy</module>
+		<module>../privacy-personal-model-intergation-testing</module>
 	</modules>
 	
 	<build>
