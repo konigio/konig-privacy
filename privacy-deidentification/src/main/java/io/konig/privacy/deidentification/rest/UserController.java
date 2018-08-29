@@ -7,6 +7,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,50 +23,40 @@ import com.opencsv.bean.ColumnPositionMappingStrategy;
 import com.opencsv.bean.CsvToBean;
 
 import io.konig.privacy.deidentification.model.Users;
-
+import io.konig.privacy.deidentification.service.UserService;
 
 @RestController
-@RequestMapping(value={"/api"}) 
+@RequestMapping(value = { "/api" })
 public class UserController {
-  
-	@RequestMapping(value="/privacy/credentials" , method = RequestMethod.POST)
+
+	@Autowired
+	UserService userService;
+
+	@RequestMapping(value = "/privacy/credentials", method = RequestMethod.POST)
 	@ResponseBody
-	public ResponseEntity<?>  uploadPrivacyCredentials(@RequestParam("file") MultipartFile file)throws  Exception{
+	public ResponseEntity<?> uploadPrivacyCredentials(@RequestParam("file") MultipartFile file) throws Exception {
 		CSVReader csvReader = null;
 		InputStream input = file.getInputStream();
-		 try
-	        { csvReader = new CSVReader(new InputStreamReader(input),',','"',1);
-		 ColumnPositionMappingStrategy mappingStrategy = 
-         		new ColumnPositionMappingStrategy();
-		 mappingStrategy.setType(Users.class);
-		 String[] columns = new String[]{"userName","password","permissions"};
-         mappingStrategy.setColumnMapping(columns);
-         CsvToBean ctb = new CsvToBean();
-         List<Users> usersList = ctb.parse(mappingStrategy,csvReader);
-         for(Users user : usersList)
-         {
-         	System.out.println(user.getUserName()+"   "+user.getPassword()+"   "
-             		+user.getPermissions());
-
-         }
-     }
-     catch(Exception ee)
-     {
-throw   new Exception();
-}
-     finally
-		{
-			try
-			{
+		try {
+			csvReader = new CSVReader(new InputStreamReader(input), ',', '"', 1);
+			ColumnPositionMappingStrategy mappingStrategy = new ColumnPositionMappingStrategy();
+			mappingStrategy.setType(Users.class);
+			String[] columns = new String[] { "userName", "password", "permissions" };
+			mappingStrategy.setColumnMapping(columns);
+			CsvToBean ctb = new CsvToBean();
+			List<Users> usersList = ctb.parse(mappingStrategy, csvReader);
+			userService.uploadDatasourceUsers(usersList);
+		} catch (Exception ee) {
+			throw new Exception();
+		} finally {
+			try {
 				csvReader.close();
-			}
-			catch(Exception ee)
-			{
-				throw   new Exception();
+			} catch (Exception ee) {
+				throw new Exception();
 			}
 		}
- 
+
 		HttpHeaders responseHeaders = new HttpHeaders();
-		return new ResponseEntity<>(responseHeaders,HttpStatus.CREATED);
+		return new ResponseEntity<>(responseHeaders, HttpStatus.CREATED);
 	}
 }
