@@ -1,0 +1,22 @@
+package io.konig.privacy.deidentification.service;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+
+import io.konig.privacy.deidentification.model.Users;
+import io.konig.privacy.deidentification.repo.UserRepository;
+
+public class UserServiceImpl implements UserService {
+
+	@Autowired
+	UserRepository userRepository;
+	
+	@Override
+	public void uploadDatasourceUsers(List<Users> userList) throws DataAccessException {
+		
+		userRepository.uploadDatasourceUsers(userList);
+		
+	}
+
+}

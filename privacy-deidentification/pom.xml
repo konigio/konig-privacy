@@ -92,7 +92,7 @@
 		<dependency>
     		<groupId>org.apache.commons</groupId>
     		<artifactId>commons-collections4</artifactId>
-    		<version>4.0</version>
+    		<version>4.2</version>
 		</dependency>
 		
 		<dependency>
@@ -130,6 +130,11 @@
             <artifactId>spring-boot-starter-jdbc</artifactId>
             <version>1.5.4.RELEASE</version>
         </dependency>
+        	<dependency>
+    <groupId>com.opencsv</groupId>
+    <artifactId>opencsv</artifactId>
+    <version>4.2</version>
+</dependency>
   </dependencies>
 
 	<build>
