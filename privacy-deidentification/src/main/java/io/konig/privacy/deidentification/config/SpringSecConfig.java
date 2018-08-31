@@ -33,8 +33,8 @@ public class SpringSecConfig extends WebSecurityConfigurerAdapter {
     
     	   auth.jdbcAuthentication().dataSource(dataSource).passwordEncoder(new MessageDigestPasswordEncoder("SHA-256"))
     	   .usersByUsernameQuery(
-    			   "select USERNAME,SHA2PASSWORD, ENABLED from USERS where USERNAME=?")
+    			   "SELECT USERNAME,PASSWORD, ENABLED FROM USERS WHERE USERNAME=?")
     			  .authoritiesByUsernameQuery(
-    			   "select USERNAME, ROLE from USER_ROLES where USERNAME=?");             }
+    			   "SELECT USERNAME, PERMISSIONS FROM USER_PERMISSIONS WHERE USERNAME=?");             }
 
 }

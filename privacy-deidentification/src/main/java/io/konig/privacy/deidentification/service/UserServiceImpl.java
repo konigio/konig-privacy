@@ -15,9 +15,20 @@ public class UserServiceImpl implements UserService {
 	UserRepository userRepository;
 	
 	@Override
-	public void uploadDatasourceUsers(List<Users> userList) throws DataAccessException {
+	public void uploadUserAccounts(List<Users> userList) throws Exception {
 		
-		userRepository.uploadDatasourceUsers(userList);
+		userRepository.uploadUserAccounts(userList);
+		
+	}
+	
+	@Override
+	public List<Users> getUserAccounts() throws DataAccessException {
+		return userRepository.getUserAccounts();
+	}
+
+	@Override
+	public void deleteUserAccounts(List<Users> userList) throws DataAccessException {
+		userRepository.deleteUserAccounts(userList);
 		
 	}
 

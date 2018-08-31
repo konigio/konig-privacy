@@ -6,6 +6,11 @@ import io.konig.privacy.deidentification.model.Users;
 
 public interface UserService {
 	
-	public  void uploadDatasourceUsers(List<Users> userList)throws DataAccessException;
+	public void uploadUserAccounts(List<Users> userList)throws Exception;
+	
+	public List<Users> getUserAccounts() throws DataAccessException;
+	
+	public void deleteUserAccounts(List<Users> userList)throws DataAccessException;
+
 
 }

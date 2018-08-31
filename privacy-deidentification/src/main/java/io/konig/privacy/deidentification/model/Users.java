@@ -24,4 +24,7 @@ public class Users {
 	public void setPermissions(String permissions) {
 		this.permissions = permissions;
 	}
+	public String toString() {
+		return userName+","+permissions;
+	}
 }
