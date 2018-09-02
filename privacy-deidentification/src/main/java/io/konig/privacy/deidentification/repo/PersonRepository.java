@@ -106,9 +106,9 @@ public class PersonRepository {
 			String receivedAtTime = isoTimestampFormat.format(provenance.getReceivedAtTime().getTime());
 			String receivedFrom = provenance.getReceivedFrom();
 			
-			
 			double receivedFromTrustLevel = trustService.getTrustLevel(receivedFrom);
-				
+			
+			
 			MergeInfo mergeInfo = new MergeInfo(objectMapper, receivedAtTime, receivedFrom, receivedFromTrustLevel, trustService);
 			
 			doMerge(mergeInfo, requestData, (ArrayNode) annotationData.get("graph"), keys);
@@ -134,7 +134,7 @@ public class PersonRepository {
 		
 		// TODO: The logic for inserting vs. updating records in the PERSON_IDENTITY table is not correct.
 		// Greg will fix this later.
-		
+
 		ObjectMapper objectMapper = mergeInfo.getObjectMapper();
 		Iterator<String> fieldNames = requestObject.fieldNames();
 		String dateModifiedValue = mergeInfo.getReceivedAtTime();
@@ -161,6 +161,7 @@ public class PersonRepository {
 					ObjectNode identityObject = (ObjectNode) identityArray.get(i);
 					String identityProviderValue = identityObject.get("identityProvider").asText();
 					String identifierValue = identityObject.get("identifier").asText();
+					
 					ObjectNode annotationNode = annotatedIdentity(annotations, identityProviderValue, identifierValue);
 					
 					if (annotationNode == null) {
@@ -225,9 +226,15 @@ public class PersonRepository {
 		}
 		
 		JdbcTemplate template = getJdbcTemplate();
+		
+		ObjectMapper annotedMapper = new ObjectMapper();
+		JsonNode annotedJsonNode = annotedMapper.createObjectNode();
+		
+		((ObjectNode) annotedJsonNode).set("graph", annotations);
+		
 
 		String updateQuery = "UPDATE DE_IDENTIFICATION.PERSON SET  ANNOTATED_PERSON_DATA=? WHERE PSEUDONYM=?";
-		template.update(updateQuery, annotations.toString(), keys.getPseudonym());
+		template.update(updateQuery, annotedJsonNode.toString(), keys.getPseudonym());
 		
 
 		//This block is for adding new email and Identity elements received during Merge
@@ -266,7 +273,6 @@ public class PersonRepository {
 				ObjectNode node = (ObjectNode) element.get("value");
 				String identifier = node.get("identifier").asText();
 				String identityProvider = node.get("identityProvider").asText();
-				
 				identityMap.put(identityProvider, new Identity(identityProvider, identifier));
 			}
 			
@@ -356,7 +362,7 @@ public class PersonRepository {
 			JsonNode node = annotations.get(i);
 			String propertyName = node.get("property").asText();
 			String emailValue= node.get("value").asText();
-			if ("email".equals(propertyName) && emailValue.equals(requestEmail)) {				
+			if ("email".equals(propertyName) && emailValue.equals(requestEmail)) {	
 				return (ObjectNode) node;
 			}
 		}
@@ -483,18 +489,18 @@ public class PersonRepository {
 		
 		List<String> argList = new ArrayList<>();
 		
-		List<Identity> arg1List = new ArrayList<>();
+		List<String> arg1List = new ArrayList<>();
 		//for combing the Identity and Email list
-		List<Object> argFinal =new ArrayList<>();
+		List<String> argFinal =new ArrayList<>();
 		
 		// Scan email list
 		
 		JsonNode emailNode = personNode.get("email");
 		if (emailNode instanceof ArrayNode) {
 			for (int i=0; i<emailNode.size(); i++) {
-				String emailValue = emailNode.get(i).asText();
-				argList.add(emailValue);
+				String emailValue = emailNode.get(i).asText();				
 				argList.add(URN_EMAIL);
+				argList.add(emailValue);
 			}
 		}
 		
@@ -507,7 +513,8 @@ public class PersonRepository {
 				String identifier = identity.get("identifier").asText();
 				String identityProvider = identity.get("identityProvider").asText();
 				Identity id= new Identity(identityProvider,identifier);
-				arg1List.add(id);
+				arg1List.add(identityProvider);
+				arg1List.add(identifier);
 			}
 		}
 		
@@ -515,24 +522,19 @@ public class PersonRepository {
 			throw new HttpClientErrorException(HttpStatus.BAD_REQUEST, "Person record must contain at least one email or one nested identity record");
 		}
 		
+		argFinal.addAll(arg1List);
+		argFinal.addAll(argList);
 		
 		sb.append('(');
-		
-		
-		for (int j=0; j<arg1List.size(); j++) {
-			sb.append('(');
-			sb.append(" b.IDENTITY_PROVIDER=?");
-			sb.append(" AND b.IDENTIFIER=?");
-			sb.append(")");
-		}
+				
 		
 		String or = "";
-		for (int i=0; i<argList.size()/2; i++) {
+		for (int i=0; i<argFinal.size()/2; i++) {
 			sb.append(or);
 			or = " OR ";		
 			sb.append('(');
-			sb.append(" b.IDENTIFIER=?");
-			sb.append(" AND b.IDENTITY_PROVIDER=?");
+			sb.append(" b.IDENTITY_PROVIDER=?");
+			sb.append(" AND b.IDENTIFIER=?");
 			sb.append(')');
 		}
 		
@@ -540,15 +542,15 @@ public class PersonRepository {
 
 		String sql = sb.toString();
 		
-		argFinal.addAll(arg1List);
-		argFinal.addAll(argList);
-		Object[] args = argFinal.toArray();		
+		Object[] args = argFinal.toArray();
 		int[] argTypes = new int[args.length];		
 		Arrays.fill(argTypes, java.sql.Types.VARCHAR);
+		
 		
 		RowMapper<PersonData> rowMapper = new PersonDataRowMapper();
 	
 		List<PersonData> pojoList = template.query(sql, args, argTypes, rowMapper);
+		
 									
 		return pojoList.isEmpty() ? null : pojoList.get(0);
 	}
