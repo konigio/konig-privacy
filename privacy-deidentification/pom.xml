@@ -165,7 +165,8 @@
 				<groupId>io.fabric8</groupId>
 				<artifactId>docker-maven-plugin</artifactId>
 				<version>0.24.0</version>			
-				<configuration>			
+				<configuration>	
+					<dockerHost>https://index.docker.io/v1/</dockerHost>
 					<images>
 						<image>			
 							<alias>service</alias>
