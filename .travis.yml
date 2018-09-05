@@ -1,0 +1,9 @@
+language: java
+
+before_install: 
+  - cd privacy-parent
+  - mvn install -N
+
+# skip cleanup is true so the working directory is not reset
+
+

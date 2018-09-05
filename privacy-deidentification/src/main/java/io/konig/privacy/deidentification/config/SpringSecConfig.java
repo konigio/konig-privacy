@@ -7,12 +7,14 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.crypto.password.MessageDigestPasswordEncoder;
 
 
 
 @Configuration
+@EnableWebSecurity
 public class SpringSecConfig extends WebSecurityConfigurerAdapter {
 
 	@Autowired
@@ -21,7 +23,7 @@ public class SpringSecConfig extends WebSecurityConfigurerAdapter {
 	
     @Override
     protected void configure(HttpSecurity httpSecurity) throws Exception {
-        httpSecurity.httpBasic().and()
+        httpSecurity.httpBasic().and().csrf().disable()
         .authorizeRequests().antMatchers("/","/swagger-resources").permitAll()
        .anyRequest().authenticated();
     }
@@ -31,8 +33,8 @@ public class SpringSecConfig extends WebSecurityConfigurerAdapter {
     
     	   auth.jdbcAuthentication().dataSource(dataSource).passwordEncoder(new MessageDigestPasswordEncoder("SHA-256"))
     	   .usersByUsernameQuery(
-    			   "select username,password, enabled from users where username=?")
+    			   "SELECT USERNAME,PASSWORD, ENABLED FROM USERS WHERE USERNAME=?")
     			  .authoritiesByUsernameQuery(
-    			   "select username, role from user_roles where username=?");             }
+    			   "SELECT USERNAME, PERMISSIONS FROM USER_PERMISSIONS WHERE USERNAME=?");             }
 
 }

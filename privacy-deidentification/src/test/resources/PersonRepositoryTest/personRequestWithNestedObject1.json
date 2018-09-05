@@ -1,0 +1,16 @@
+{
+	"givenName" : "Allie",
+	"email" : ["alice@example.com"],
+	"contactPoint" : {
+		"telephone" : "+1-877-746-1010",
+		"contactOption" : "TollFree",
+		"areaServed" : "UK"
+	},
+	"identity" : [{
+		"identifier" : "alice.jones",
+		"identityProvider" : "http://firstIdentityProvider.com"
+	}, {
+		"identifier" : "ajones",
+		"identityProvider" : "http://secondIdentityProvider.com"
+	}]
+}
