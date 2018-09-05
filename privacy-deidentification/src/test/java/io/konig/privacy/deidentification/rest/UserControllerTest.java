@@ -30,7 +30,7 @@ public class UserControllerTest {
 	@MockBean
 	private JdbcTemplate jdbcTemplate;
 	
-	@Ignore
+	@Test
 	public void authenticationTest() throws Exception {
 		mockMvc.perform(
 				get("/api/privacy/{version}/credentials", "v1"))
