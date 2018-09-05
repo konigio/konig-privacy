@@ -232,9 +232,10 @@ public class PersonRepository {
 		
 		((ObjectNode) annotedJsonNode).set("graph", annotations);
 		
-
-		String updateQuery = "UPDATE DE_IDENTIFICATION.PERSON SET  ANNOTATED_PERSON_DATA=? WHERE PSEUDONYM=?";
-		template.update(updateQuery, annotedJsonNode.toString(), keys.getPseudonym());
+		JsonNode simpleJson=getSimpleJson(annotations);
+		
+		String updateQuery = "UPDATE DE_IDENTIFICATION.PERSON SET  ANNOTATED_PERSON_DATA=?, PERSON_DATA=? WHERE PSEUDONYM=?";
+		template.update(updateQuery, annotedJsonNode.toString(), simpleJson.toString(), keys.getPseudonym());
 		
 
 		//This block is for adding new email and Identity elements received during Merge
@@ -256,6 +257,39 @@ public class PersonRepository {
 		
 	}
 
+
+	private JsonNode getSimpleJson(ArrayNode annotations) {
+		ObjectMapper mapper = new ObjectMapper();
+		ObjectNode simpleJson=mapper.createObjectNode();
+		for(int i=0;i<annotations.size();i++){
+			JsonNode node=annotations.get(i);
+			String propertyName=node.get("property").asText();
+			JsonNode valueNode=node.get("value");
+			String value=valueNode.asText();
+			if("identity".equals(propertyName) || "email".equals(propertyName)){
+				JsonNode identityNode=simpleJson.get(propertyName);
+				if(identityNode!=null){
+					if(identityNode instanceof ArrayNode){
+						identityNode=((ArrayNode) identityNode).add(valueNode);
+						simpleJson.set(propertyName, identityNode);
+					}
+					else{
+						ArrayNode identityArrayNode=mapper.createArrayNode();
+						identityArrayNode.add(identityNode);
+						identityArrayNode.add(valueNode);
+						simpleJson.set(propertyName, identityArrayNode);
+					}
+				}
+				else{
+					simpleJson.set(propertyName, valueNode);
+				}
+			}
+			else {
+				simpleJson.set(propertyName, valueNode);
+			}
+		}
+		return simpleJson;
+	}
 
 	private void collectDirectIdentifiers(
 		Set<String> emailSet,

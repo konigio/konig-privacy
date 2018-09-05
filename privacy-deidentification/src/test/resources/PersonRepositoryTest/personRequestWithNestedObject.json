@@ -1,0 +1,24 @@
+{
+	"givenName" : "Allie",
+	"email" : ["alice@example.com"],
+	"postalAddress" : [{
+		"addressLocality" : "WA",
+		"steetAddress" : "40, College Road",
+		"postalCode" : "123456"
+	},{
+		"addressLocality" : "NY",
+		"postalCode" : "234567"
+	},{
+		"addressLocality" : "Seattle",
+		"steetAddress" : "20 Downstreet",
+		"postalCode" : "654321",
+		"addressCountry" : "USA"
+	}],
+	"identity" : [{
+		"identifier" : "alice.jones",
+		"identityProvider" : "http://firstIdentityProvider.com"
+	}, {
+		"identifier" : "ajones",
+		"identityProvider" : "http://secondIdentityProvider.com"
+	}]
+}
