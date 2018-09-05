@@ -10,7 +10,9 @@
   <name>Privacy Personal Model</name>
   <packaging>jar</packaging>
   <description>A data model for personal information and the data sources that provide that information.</description>
-  
+  <properties>
+  <docker.registry.host>https://${aws-account-id}.dkr.ecr.${aws-region}.amazonaws.com</docker.registry.host>
+  </properties>
   <dependencies>
 	
 		<dependency>
