@@ -1,0 +1,15 @@
+{
+	 
+	"email" : "alice.jones@example.com",
+	"postalAddress" : [{
+				"addressLocality" : "Seattle",
+				"streetAddress" : "20 Downstreet",
+				"postalCode" : "600123"
+			},
+			{
+				"streetAddress" : "38 avenue de l'Opera",
+				"postalCode" : "331468",
+				"addressLocality" : "Paris, France"
+			}]
+
+}

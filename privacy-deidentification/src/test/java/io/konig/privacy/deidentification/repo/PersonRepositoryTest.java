@@ -22,6 +22,7 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.env.MockEnvironment;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -36,7 +37,6 @@ import io.konig.privacy.deidentification.model.Provenance;
 import io.konig.privacy.deidentification.repo.PersonRepository.PersonDataRowMapper;
 
 public class PersonRepositoryTest {
-	
 	
 	@Mock
 	JdbcTemplate jdbcTemplate;
@@ -123,9 +123,6 @@ public class PersonRepositoryTest {
 
 	@Test
 	public void testMerge() throws Exception {
-
-		
-		
 		
 		List<PersonData> personDataList = new ArrayList<>();
 		
@@ -188,45 +185,153 @@ public class PersonRepositoryTest {
 		
 		// Verify that the first update statement was executed correctly.
 		
-		String firstUpdateSqlExpected = "UPDATE DE_IDENTIFICATION.PERSON SET  ANNOTATED_PERSON_DATA=? WHERE PSEUDONYM=?";
+		String firstUpdateSqlExpected = "UPDATE DE_IDENTIFICATION.PERSON SET  ANNOTATED_PERSON_DATA=?, PERSON_DATA=? WHERE PSEUDONYM=?";
 		
 		assertEquals(firstUpdateSqlExpected, actualUpdateSql.get(0));
 		
 		List<Object> updateArgList = updateArgCaptor.getAllValues();
-		assertEquals(11, updateArgList.size());
+		assertEquals(12, updateArgList.size());
 		
 		String annotatedPersonExpected = loadAsString("PersonRepositoryTest/expectedAnnotatedPerson.json");
 		
 		assertEquals(annotatedPersonExpected, updateArgList.get(0));
 		
-		assertEquals(pseudonymExpected, updateArgList.get(1));
+		assertEquals(pseudonymExpected, updateArgList.get(2));
 
 		// Verify that the second update statement was executed correctly
 		String insertPersonIdentity = "INSERT INTO  DE_IDENTIFICATION.PERSON_IDENTITY (PERSON_PSEUDONYM, IDENTITY_PROVIDER,IDENTIFIER) VALUES (?,?,?)";
 		assertEquals(insertPersonIdentity, actualUpdateSql.get(1));
 		
-		assertEquals(pseudonymExpected, updateArgList.get(2));
-		assertEquals("urn:email", updateArgList.get(3));
-		assertEquals("alice@example.com", updateArgList.get(4));
+		assertEquals(pseudonymExpected, updateArgList.get(3));
+		assertEquals("urn:email", updateArgList.get(4));
+		assertEquals("alice@example.com", updateArgList.get(5));
 		
 		// Verify that the third update statement was executed correctly
 
 		assertEquals(insertPersonIdentity, actualUpdateSql.get(2));
-		assertEquals(pseudonymExpected, updateArgList.get(5));
-		assertEquals("http://firstIdentityProvider.com", updateArgList.get(6));
-		assertEquals("alice.jones", updateArgList.get(7));
+		assertEquals(pseudonymExpected, updateArgList.get(6));
+		assertEquals("http://firstIdentityProvider.com", updateArgList.get(7));
+		assertEquals("alice.jones", updateArgList.get(8));
 		
 		// Verify that the fourth update statement was executed correctly
 
 		assertEquals(insertPersonIdentity, actualUpdateSql.get(3));
-		assertEquals(pseudonymExpected, updateArgList.get(8));
-		assertEquals("http://secondIdentityProvider.com", updateArgList.get(9));
-		assertEquals("ajones", updateArgList.get(10));
+		assertEquals(pseudonymExpected, updateArgList.get(9));
+		assertEquals("http://secondIdentityProvider.com", updateArgList.get(10));
+		assertEquals("ajones", updateArgList.get(11));
 		
 		
 		
 	}
+	
+	@Test
+	public void testMergeWithArrayOfNestedObject() throws Exception {
+		List<PersonData> personDataList = new ArrayList<>();
+		
+		String pseudonymExpected = "expectedPseudonym";
+		String priorSimplePerson = loadAsString("PersonRepositoryTest/priorSimplePersonWithArrayOfNestedObject.json");
+		
+		
+		String priorAnnotatedPerson =
+			"{\n" + 
+			"  \"graph\" : [{\n" + 
+			"    \"property\" : \"email\",\n" + 
+			"    \"value\" : \"alice.jones@example.com\",\n" + 
+			"    \"dateModified\" : \"2018-01-01T08:00.000Z\",\n" + 
+			"    \"dataSource\" : \"http://untrustedDatasource.com/\"\n" + 
+			"  },{\n" + 
+			"    \"property\" : \"postalAddress\",\n" + 
+			"    \"value\" : [{\n"+
+			"	\"addressLocality\" : \"Seattle\",\n" +
+			"	\"streetAddress\" : \"20 Downstreet\",\n" +
+			"	\"postalCode\" : \"600123\"\n"+
+			"	},{\n"+
+			"	\"streetAddress\" : \"38 avenue de l'Opera\",\n" +
+			"	\"postalCode\" : \"331468\",\n"+
+			"	\"addressLocality\" : \"Paris, France\"\n"+
+			"	}],\n"+
+			"    \"dateModified\" : \"2018-01-01T08:00.000Z\",\n" + 
+			"    \"dataSource\" : \"http://untrustedDatasource.com/\"\n" + 
+			"  }]\n" + 
+			"}";
 
+		
+		PersonData priorPersonData = new PersonData();
+		priorPersonData.setPseudonym(pseudonymExpected);
+		priorPersonData.setPerson(priorSimplePerson);
+		priorPersonData.setAnnotated_person(priorAnnotatedPerson);
+		
+		personDataList.add(priorPersonData);
+		
+		when(jdbcTemplate.query(any(String.class), any(Object[].class), any(int[].class), any(PersonDataRowMapper.class))).thenReturn(personDataList);
+		
+		personJson = loadJson("PersonRepositoryTest/personRequestWithNestedObject.json");
+		personWithMetadata.setPerson(personJson);
+		PersonKeys personKeys = repository.put(personWithMetadata);
+		ArgumentCaptor<String> updateSqlCaptor = ArgumentCaptor.forClass(String.class);
+		ArgumentCaptor<Object> updateArgCaptor = ArgumentCaptor.forClass(Object.class);
+		
+		verify(jdbcTemplate, times(4)).update(updateSqlCaptor.capture(), updateArgCaptor.capture());
+		List<Object> updateArgList = updateArgCaptor.getAllValues();
+		
+		String annotatedPersonExpected = loadAsString("PersonRepositoryTest/expectedAnnotatedPersonWithNestedObject.json");
+		
+		assertEquals(annotatedPersonExpected, updateArgList.get(0));
+	}
+	
+	
+	@Test
+	public void testMergeWithNestedObject() throws Exception {
+		List<PersonData> personDataList = new ArrayList<>();
+		
+		String pseudonymExpected = "expectedPseudonym";
+		String priorSimplePerson = loadAsString("PersonRepositoryTest/priorSimplePersonWithNestedObject.json");
+		
+		
+		String priorAnnotatedPerson =
+			"{\n" + 
+			"  \"graph\" : [{\n" + 
+			"    \"property\" : \"email\",\n" + 
+			"    \"value\" : \"alice.jones@example.com\",\n" + 
+			"    \"dateModified\" : \"2018-01-01T08:00.000Z\",\n" + 
+			"    \"dataSource\" : \"http://untrustedDatasource.com/\"\n" + 
+			"  },{\n" + 
+			"    \"property\" : \"contactPoint\",\n" + 
+			"    \"value\" : {\n"+
+			"	\"telephone\" : \"+1-877-746-0909\",\n" +
+			"	\"contactType\" : \"customer service\",\n" +
+			"	\"contactOption\" : \"TollFree\",\n"+
+			"	\"areaServed\" : \"US\"\n"+
+			"	},\n"+
+			"    \"dateModified\" : \"2018-01-01T08:00.000Z\",\n" + 
+			"    \"dataSource\" : \"http://untrustedDatasource.com/\"\n" + 
+			"  }]\n" + 
+			"}";
+
+		
+		PersonData priorPersonData = new PersonData();
+		priorPersonData.setPseudonym(pseudonymExpected);
+		priorPersonData.setPerson(priorSimplePerson);
+		priorPersonData.setAnnotated_person(priorAnnotatedPerson);
+		
+		personDataList.add(priorPersonData);
+		
+		when(jdbcTemplate.query(any(String.class), any(Object[].class), any(int[].class), any(PersonDataRowMapper.class))).thenReturn(personDataList);
+		
+		personJson = loadJson("PersonRepositoryTest/personRequestWithNestedObject1.json");
+		personWithMetadata.setPerson(personJson);
+		PersonKeys personKeys = repository.put(personWithMetadata);
+		ArgumentCaptor<String> updateSqlCaptor = ArgumentCaptor.forClass(String.class);
+		ArgumentCaptor<Object> updateArgCaptor = ArgumentCaptor.forClass(Object.class);
+		
+		verify(jdbcTemplate, times(4)).update(updateSqlCaptor.capture(), updateArgCaptor.capture());
+		
+		List<Object> updateArgList = updateArgCaptor.getAllValues();
+		
+		String annotatedPersonExpected = loadAsString("PersonRepositoryTest/expectedAnnotatedPersonWithNestedObject1.json");
+		
+		assertEquals(annotatedPersonExpected, updateArgList.get(0));
+	}
 	private String loadAsString(String path) {
 		InputStream input = getClass().getClassLoader().getResourceAsStream(path);
 		if (input == null) {
@@ -240,5 +345,4 @@ public class PersonRepositoryTest {
 		
 		
 	}
-
 }

@@ -10,7 +10,6 @@
   <name>Privacy Personal Model</name>
   <packaging>jar</packaging>
   <description>A data model for personal information and the data sources that provide that information.</description>
-  
   <dependencies>
 	
 		<dependency>
@@ -92,7 +91,7 @@
 		<dependency>
     		<groupId>org.apache.commons</groupId>
     		<artifactId>commons-collections4</artifactId>
-    		<version>4.0</version>
+    		<version>4.2</version>
 		</dependency>
 		
 		<dependency>
@@ -125,6 +124,12 @@
 		    <artifactId>spymemcached</artifactId>
 		    <version>2.12.3</version>
 		</dependency>
+	    <dependency>
+	    <groupId>com.opencsv</groupId>
+	    <artifactId>opencsv</artifactId>
+	    <version>4.2</version>
+	</dependency>
+
   </dependencies>
 
 	<build>
@@ -159,7 +164,7 @@
 				<groupId>io.fabric8</groupId>
 				<artifactId>docker-maven-plugin</artifactId>
 				<version>0.24.0</version>			
-				<configuration>			
+				<configuration>	
 					<images>
 						<image>			
 							<alias>service</alias>
@@ -194,16 +199,8 @@
 							</build>						
 						</image>			
 					</images>
-				</configuration>
-				<executions>
-					<execution>
-						<id>docker-build</id>
-						<goals>
-							<goal>build</goal>
-						</goals>
-					</execution>
-				</executions>						
-			</plugin> 	 							
+				</configuration>					
+			</plugin>  		 							
 		</plugins>
 	</build>
   

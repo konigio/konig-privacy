@@ -9,6 +9,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Bean;
@@ -21,17 +23,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.konig.privacy.deidentification.repo.DataModelRepository;
 
 @RunWith(SpringRunner.class)
+@SpringBootTest
+@AutoConfigureMockMvc
 public class DataModelServiceImplTest {
 
-	@TestConfiguration
-    static class DataModelServiceImplTestContextConfiguration {
-  
-        @Bean
-        public DataModelService dataModelService() {
-            return new DataModelServiceImpl();
-        }
-    }
-	
 	@Autowired
     private DataModelService dataModelService;
  
