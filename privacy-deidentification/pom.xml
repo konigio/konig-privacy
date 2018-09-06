@@ -10,7 +10,9 @@
   <name>Privacy Personal Model</name>
   <packaging>jar</packaging>
   <description>A data model for personal information and the data sources that provide that information.</description>
-  
+  <properties>
+  <docker.registry.host>https://${aws-account-id}.dkr.ecr.${aws-region}.amazonaws.com</docker.registry.host>
+  </properties>
   <dependencies>
 	
 		<dependency>
@@ -163,7 +165,7 @@
 				<groupId>io.fabric8</groupId>
 				<artifactId>docker-maven-plugin</artifactId>
 				<version>0.24.0</version>			
-				<configuration>			
+				<configuration>	
 					<images>
 						<image>			
 							<alias>service</alias>
@@ -186,15 +188,7 @@
 							</build>						
 						</image>			
 					</images>
-				</configuration>
-				<executions>
-					<execution>
-						<id>docker-build</id>
-						<goals>
-							<goal>build</goal>
-						</goals>
-					</execution>
-				</executions>						
+				</configuration>					
 			</plugin>  		 							
 		</plugins>
 	</build>

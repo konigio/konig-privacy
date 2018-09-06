@@ -5,6 +5,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -67,5 +69,27 @@ public class DataModelRepository {
 		String version = "v" + Integer.toString(primaryKey);
 		return version;
 	}
+	
+	public void deleteDataModel(String version){
+		String query = "SELECT COUNT(*) from DE_IDENTIFICATION.PERSON WHERE VERSION=?";
+		int count = template.queryForObject(query, Integer.class, version);
+		if(count>0){
+			
+			String selectQuery="SELECT PSEUDONYM from DE_IDENTIFICATION.PERSON WHERE VERSION=?";
+			List<String> pseudonym = template.queryForList(selectQuery, String.class, version);
+			
+			for(String str:pseudonym){
+				String deletePersonIdentityQuery="DELETE from DE_IDENTIFICATION.PERSON_IDENTITY WHERE PERSON_PSEUDONYM=?";
+				template.update(deletePersonIdentityQuery, str);
+				
+				String deletePersonQuery="DELETE FROM DE_IDENTIFICATION.PERSON WHERE PSEUDONYM=?";
+				template.update(deletePersonQuery, str);
+			}						
+		
+		}
+		
+		String deleteDataModelQuery="DELETE FROM DE_IDENTIFICATION.DATA_MODEL WHERE VERSION=?";
+		template.update(deleteDataModelQuery, version.substring(1));
 
+	}
 }

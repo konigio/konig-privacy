@@ -58,5 +58,11 @@ public class DataModelController {
 	    return new ResponseEntity<>(responseHeaders, HttpStatus.CREATED);
 	}
 	
+	@RequestMapping(value="/schema/{version}" , method = RequestMethod.DELETE)
+	public ResponseEntity<Void> deleteDataModel(@PathVariable("version") String version) throws DataAccessException{
+		dataModelService.deleteDataModel(version);
+		return new ResponseEntity<Void>( HttpStatus.OK);
+	}
+	
 
 }
