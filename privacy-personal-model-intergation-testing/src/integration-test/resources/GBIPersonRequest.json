@@ -1,0 +1,29 @@
+{
+  "header" : {
+    "datasource" : "https://schema.pearson.com/system/OneCRM"
+  },
+  "data" : [{
+	"givenName" : "Tanji",
+	"email" : ["Tanji@example.com"],
+	"mailingAddress" : {
+		"fullAddress"	:	"40, College Road, WA, 123456",
+		"addresseeName" : 	"Permanent Address",
+		"streetAddress" : "40, College Road",
+		"addressLocality" : "WA",				
+		"postalCode" : "123456",
+		"addressCountry" : "USA"
+	},
+	"contactPoint" : [{
+		"contactPointNumber" : "+1-877-746-1010",
+		"contactPointType" : "contacttype:Email",
+		"email" : "Tanji@example.com"
+	}],
+	"identity" : [{
+		"identityProvider" : "https://schema.pearson.com/idam",
+		"identifier" : "1234567"		
+	}, {
+		"identityProvider" : "https://schema.pearson.com/OneCRM",
+		"identifier" : "7654321"
+	}]
+}]
+}
