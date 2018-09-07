@@ -14,7 +14,7 @@
 		"postalCode" : "654321",
 		"addressCountry" : "USA"
 	}],
-	"identity" : [{
+	"identifiedBy" : [{
 		"identifier" : "alice.jones",
 		"identityProvider" : "http://firstIdentityProvider.com"
 	}, {

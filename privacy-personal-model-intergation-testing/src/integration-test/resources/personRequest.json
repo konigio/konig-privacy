@@ -7,7 +7,7 @@
     "familyName" : "Jones",
     "email" : ["alice@example.com"],
     "gender" : "female",
-    "identity" : [{
+    "identifiedBy" : [{
       "identityProvider" : "https://schema.pearson.com/idam",
       "identifier" : "gFTjHIk2FGwkRGW4WHMm"
     }, {

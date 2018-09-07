@@ -1,7 +1,7 @@
 {
 	"givenName" : "Allie",
 	"email" : ["alice@example.com"],
-	"identity" : [{
+	"identifiedBy" : [{
 		"identifier" : "alice.jones",
 		"identityProvider" : "http://firstIdentityProvider.com"
 	}, {
