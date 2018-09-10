@@ -1,0 +1,18 @@
+{
+  "header" : {
+    "datasource" : "https://schema.pearson.com/system/OneCRM"
+  },
+  "data" : [{
+    "givenName" : "Alice",
+    "familyName" : "Jones",
+    "email" : ["alice@example.com"],
+    "gender" : "female",
+    "identity" : [{
+      "identityProvider" : "https://schema.pearson.com/idam",
+      "identifier" : "gFTjHIk2FGwkRGW4WHMm"
+    }, {
+      "identityProvider" : "https://schema.pearson.com/OneCRM",
+      "identifier": "46030288"
+    }]
+}]
+}

@@ -1,0 +1,201 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+		<groupId>io.konig</groupId>
+		<artifactId>privacy-parent</artifactId>
+		<version>1.0.0-SNAPSHOT</version>
+		<relativePath>../privacy-parent/pom.xml</relativePath>
+	</parent>
+  <artifactId>privacy-personal-model-intergation-testing</artifactId>
+  
+
+  <name>privacy-personal-model-intergation-testing</name>
+  <url>http://maven.apache.org</url>
+
+ <properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<skip.integration.tests>true</skip.integration.tests>
+		<skip.unit.tests>false</skip.unit.tests>
+	</properties>
+
+	<profiles>
+		<!-- The Configuration of the development profile -->
+		<!-- <profile>
+			<id>dev</id>
+			<activation>
+				<activeByDefault>false</activeByDefault>
+			</activation>
+
+		</profile> -->
+		<!-- The Configuration of the integration-test profile -->
+		<profile>
+			<id>integration-test</id>
+			<properties>
+				<skip.integration.tests>false</skip.integration.tests>
+				<skip.unit.tests>true</skip.unit.tests>
+			</properties>
+		</profile>
+	</profiles>
+
+	<dependencies>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.12</version>
+			<scope>test</scope>
+		</dependency>
+		
+		<dependency>
+			<groupId>io.konig</groupId>
+			<artifactId>privacy-personal-model</artifactId>
+			<version>1.0.0-SNAPSHOT</version>
+		</dependency>
+		
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<version>1.5.4.RELEASE</version>			
+		</dependency>
+		
+		<dependency>
+			<groupId>org.apache.maven.shared</groupId>
+			<artifactId>maven-invoker</artifactId>
+			<version>2.1.1</version>
+		</dependency>
+
+	</dependencies>
+
+	<build>
+
+		<plugins>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>build-helper-maven-plugin</artifactId>
+				<version>1.12</version>
+				<executions>
+					<execution>
+						<id>add-integration-test-sources</id>
+						<phase>generate-test-sources</phase>
+						<goals>
+							<goal>add-test-source</goal>
+						</goals>
+						<configuration>
+							<sources>
+								<source>src/integration-test/java</source>
+							</sources>
+						</configuration>
+					</execution>
+					<execution>
+						<id>add-integration-test-resources</id>
+						<phase>generate-test-resources</phase>
+						<goals>
+							<goal>add-test-resource</goal>
+						</goals>
+						<configuration>
+							<resources>
+								<resource>
+									<!--<filtering>true</filtering> -->
+									<directory>src/integration-test/resources</directory>
+								</resource>
+							</resources>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-failsafe-plugin</artifactId>
+				<version>2.18.1</version>
+				<executions>
+					<execution>
+						<id>integration-tests</id>
+						<goals>
+							<goal>integration-test</goal>
+							<goal>verify</goal>
+						</goals>
+						<configuration>
+							<includes>
+								<include>**/*.java</include>
+							</includes>
+							<groups>io.konig.test.IntegrationTest</groups>
+							<skipTests>${skip.integration.tests}</skipTests>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			
+			<plugin>
+    		<groupId>org.apache.maven.plugins</groupId>
+    		<artifactId>maven-surefire-plugin</artifactId>
+    		<version>2.19.1</version>
+    		 <configuration>
+        		<testFailureIgnore>true</testFailureIgnore>
+        		<skipTests>${skip.unit.tests}</skipTests>
+        		<excludedGroups>io.konig.test.IntegrationTest</excludedGroups>
+    		</configuration> 
+			</plugin>
+			
+		</plugins>
+
+		<pluginManagement>
+			<plugins>
+				<!--This plugin's configuration is used to store Eclipse m2e settings 
+					only. It has no influence on the Maven build itself. -->
+				<plugin>
+					<groupId>org.eclipse.m2e</groupId>
+					<artifactId>lifecycle-mapping</artifactId>
+					<version>1.0.0</version>
+					<configuration>
+						<lifecycleMappingMetadata>
+							<pluginExecutions>
+								<pluginExecution>
+									<pluginExecutionFilter>
+										<groupId>org.codehaus.mojo</groupId>
+										<artifactId>exec-maven-plugin</artifactId>
+										<versionRange>[1.5.0,)</versionRange>
+										<goals>
+											<goal>
+												add-test-resource
+											</goal>
+										</goals>
+									</pluginExecutionFilter>
+									<action>
+										<ignore></ignore>
+									</action>
+								</pluginExecution>
+								<pluginExecution>
+									<pluginExecutionFilter>
+										<groupId>
+											org.codehaus.mojo
+										</groupId>
+										<artifactId>
+											build-helper-maven-plugin
+										</artifactId>
+										<versionRange>
+											[1.12,)
+										</versionRange>
+										<goals>
+											<goal>add-test-source</goal>
+											<goal>
+												add-test-resource
+											</goal>
+										</goals>
+									</pluginExecutionFilter>
+									<action>
+										<ignore></ignore>
+									</action>
+								</pluginExecution>
+							</pluginExecutions>
+						</lifecycleMappingMetadata>
+					</configuration>
+				</plugin>
+			</plugins>
+		</pluginManagement>
+		
+		
+	</build>
+</project>
