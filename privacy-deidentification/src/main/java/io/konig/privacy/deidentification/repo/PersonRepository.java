@@ -252,7 +252,7 @@ public class PersonRepository {
 		List<String> emailList = new ArrayList<>(emailSet);
 		
 		keys.setEmail(emailList);
-		keys.setIdentity(identityList);
+		keys.setIdentifiedBy(identityList);
 		
 		
 	}
@@ -490,7 +490,7 @@ public class PersonRepository {
 		
 		
 		keys.setEmail(emailList);
-		keys.setIdentity(identityList);;
+		keys.setIdentifiedBy(identityList);;
 		return keys;
 	}
 	
