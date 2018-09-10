@@ -67,7 +67,7 @@
         "type" : "string"
       }
     },
-    "identity" : {
+    "identifiedBy" : {
       "description" : "An entity that records a unique identifier for the Person as defined by some Identity Provider.",
       "type" : "array",
       "items" : {

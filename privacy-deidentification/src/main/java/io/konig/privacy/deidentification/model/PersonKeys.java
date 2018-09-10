@@ -11,7 +11,7 @@ public class PersonKeys {
 	
 	private String pseudonym;
 	private List<String> email;
-	private List<Identity> identity;
+	private List<IdentifiedBy> identity;
 	private String id;
 	/**
 	 * Get the pseudonym for the target person as defined by the privacy services
@@ -50,7 +50,7 @@ public class PersonKeys {
 	 * Get the list of identities for the target person as assigned by various identity providers.
 	 * @return The list of identities for the target person as assigned by various identity providers.
 	 */
-	public List<Identity> getIdentity() {
+	public List<IdentifiedBy> getIdentity() {
 		return identity;
 	}
 	
@@ -58,7 +58,7 @@ public class PersonKeys {
 	 * Set the list of identities for the target person as assigned by various identity providers.
 	 * @param identity The list of identities for the target person as assigned by various identity providers.
 	 */
-	public void setIdentity(List<Identity> identity) {
+	public void setIdentity(List<IdentifiedBy> identity) {
 		this.identity = identity;
 	}
 

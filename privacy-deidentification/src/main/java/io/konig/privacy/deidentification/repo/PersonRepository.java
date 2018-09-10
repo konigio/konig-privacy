@@ -35,7 +35,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 
 import io.konig.privacy.deidentification.model.EnvironmentConstants;
-import io.konig.privacy.deidentification.model.Identity;
+import io.konig.privacy.deidentification.model.IdentifiedBy;
 import io.konig.privacy.deidentification.model.PersonData;
 import io.konig.privacy.deidentification.model.PersonKeys;
 import io.konig.privacy.deidentification.model.PersonWithMetadata;
@@ -141,19 +141,19 @@ public class PersonRepository {
 		String dataSourceValue = mergeInfo.getReceivedFrom();
 		
 		LinkedHashSet<String> emailSet = new LinkedHashSet<>();
-		LinkedHashMap<String, Identity> identityMap = new LinkedHashMap<>();
+		LinkedHashMap<String, IdentifiedBy> identityMap = new LinkedHashMap<>();
 		
-		List<Identity> identityList = new ArrayList<Identity>();
+		List<IdentifiedBy> identityList = new ArrayList<IdentifiedBy>();
 		
 		List<String> diffEmailList = new ArrayList<String>();
-		List<Identity> diffIdentityList = new ArrayList<Identity>();
+		List<IdentifiedBy> diffIdentityList = new ArrayList<IdentifiedBy>();
 		
 		collectDirectIdentifiers(emailSet, identityMap, annotations);
 		
 		while (fieldNames.hasNext()) {
 			String fieldName = fieldNames.next();
 			JsonNode requestValue = requestObject.get(fieldName);
-			if (fieldName.equals("identity")) {
+			if (fieldName.equals("identifiedBy")) {
 				// Special handling for "identity" object
 				
 				ArrayNode identityArray = (ArrayNode) requestValue;
@@ -169,8 +169,8 @@ public class PersonRepository {
 						ObjectNode value = objectMapper.createObjectNode();
 						value.put("identifier", identifierValue);
 						value.put("identityProvider", identityProviderValue);
-						addAnnotation(mergeInfo, annotations, "identity", value);
-						Identity identity = new Identity(identityProviderValue, identifierValue);
+						addAnnotation(mergeInfo, annotations, "identifiedBy", value);
+						IdentifiedBy identity = new IdentifiedBy(identityProviderValue, identifierValue);
 						identityList.add(identity);
 						diffIdentityList.add(identity);
 						
@@ -182,7 +182,7 @@ public class PersonRepository {
 						identityNode.put("identifier", identifierValue);
 						annotationNode.put("dateModified", dateModifiedValue);
 						annotationNode.put("dataSource", dataSourceValue);
-						Identity identity = new Identity(identityProviderValue, identifierValue);
+						IdentifiedBy identity = new IdentifiedBy(identityProviderValue, identifierValue);
 						identityList.add(identity);
 					}
 				}
@@ -266,7 +266,7 @@ public class PersonRepository {
 			String propertyName=node.get("property").asText();
 			JsonNode valueNode=node.get("value");
 			String value=valueNode.asText();
-			if("identity".equals(propertyName) || "email".equals(propertyName)){
+			if("identifiedBy".equals(propertyName) || "email".equals(propertyName)){
 				JsonNode identityNode=simpleJson.get(propertyName);
 				if(identityNode!=null){
 					if(identityNode instanceof ArrayNode){
@@ -293,7 +293,7 @@ public class PersonRepository {
 
 	private void collectDirectIdentifiers(
 		Set<String> emailSet,
-		Map<String, Identity> identityMap, 
+		Map<String, IdentifiedBy> identityMap, 
 		ArrayNode annotations
 	) {
 		for (int i=0; i<annotations.size(); i++) {
@@ -303,11 +303,11 @@ public class PersonRepository {
 			if (propertyName.equals("email")) {
 				String value = element.get("value").asText();
 				emailSet.add(value);
-			} else if (propertyName.equals("identity")) {
+			} else if (propertyName.equals("identifiedBy")) {
 				ObjectNode node = (ObjectNode) element.get("value");
 				String identifier = node.get("identifier").asText();
 				String identityProvider = node.get("identityProvider").asText();
-				identityMap.put(identityProvider, new Identity(identityProvider, identifier));
+				identityMap.put(identityProvider, new IdentifiedBy(identityProvider, identifier));
 			}
 			
 			
@@ -440,10 +440,10 @@ public class PersonRepository {
 		for (int i=0; i<annotations.size(); i++) {
 			JsonNode node = annotations.get(i);
 			String propertyName = node.get("property").asText();
-			if("identity".equals(propertyName) &&  node instanceof ObjectNode){
+			if("identifiedBy".equals(propertyName) &&  node instanceof ObjectNode){
 				String identityProviderValue= node.get("value").get("identityProvider").asText();
 				String identifierValue = node.get("value").get("identifier").asText();
-				if ("identity".equals(propertyName) && identityProviderValue.equals(identityProvider) &&  identifierValue.equals(identifier)) {
+				if ("identifiedBy".equals(propertyName) && identityProviderValue.equals(identityProvider) &&  identifierValue.equals(identifier)) {
 					return (ObjectNode) node;
 				}
 			}
@@ -470,11 +470,11 @@ public class PersonRepository {
 		template.update(queryPerson, dataSourceId, metaPerson.getPerson().toString(), annotedJson.toString(), metaPerson.getMetadata().getDataModel().getVersion(), pseudonym);
 		
 		List<String> emailList = new ArrayList<>();
-		List<Identity> identityList = new ArrayList<>();
+		List<IdentifiedBy> identityList = new ArrayList<>();
 		JsonNode emailNode = metaPerson.getPerson().get("email");
 		if (emailNode instanceof ArrayNode)
 			emailList=getEmailList(metaPerson.getPerson());
-		JsonNode identityNodeList = metaPerson.getPerson().get("identity");
+		JsonNode identityNodeList = metaPerson.getPerson().get("identifiedBy");
 		if(identityNodeList instanceof ArrayNode)
 			identityList=getIdentityList(metaPerson.getPerson());
 		
@@ -540,13 +540,13 @@ public class PersonRepository {
 		
 		
 		// Scan identity list
-		JsonNode identityList = personNode.get("identity");
+		JsonNode identityList = personNode.get("identifiedBy");
 		if (identityList instanceof ArrayNode) {
 			for (int i=0; i<identityList.size(); i++) {
 				JsonNode identity = identityList.get(i);
 				String identifier = identity.get("identifier").asText();
 				String identityProvider = identity.get("identityProvider").asText();
-				Identity id= new Identity(identityProvider,identifier);
+				IdentifiedBy id= new IdentifiedBy(identityProvider,identifier);
 				arg1List.add(identityProvider);
 				arg1List.add(identifier);
 			}
@@ -602,9 +602,9 @@ public class PersonRepository {
 		return email;
 	}
 	
-	public List<Identity> getIdentityList(JsonNode personNode) throws Exception{
-		JsonNode identityNode = personNode.get("identity");
-		List<Identity> identityList = new ArrayList<Identity>();
+	public List<IdentifiedBy> getIdentityList(JsonNode personNode) throws Exception{
+		JsonNode identityNode = personNode.get("identifiedBy");
+		List<IdentifiedBy> identityList = new ArrayList<IdentifiedBy>();
 			for (int z = 0; z < identityNode.size(); z++) {
 				JsonNode identityItem = identityNode.get(z);
 				String identifier = identityItem.get("identifier").asText();
@@ -612,7 +612,7 @@ public class PersonRepository {
 				if(identityProvider.isEmpty() || identifier.isEmpty()){
 					throw new Exception("Identifier cannot be Empty");
 				}				
-				Identity identity = new Identity(identityProvider, identifier);			
+				IdentifiedBy identity = new IdentifiedBy(identityProvider, identifier);			
 				identityList.add(identity);
 			}				
 		return identityList;
@@ -770,9 +770,9 @@ public class PersonRepository {
 		return email;
 	}
 	
-	public List<Identity> fetchIdentityList(ObjectNode objectValue, boolean isDynamicQueryRequired,StringBuilder sbQuery) throws Exception{
-		ArrayNode identityArray = (ArrayNode) objectValue.findValue("identity");
-		List<Identity> identityList = new ArrayList<Identity>();
+	public List<IdentifiedBy> fetchIdentityList(ObjectNode objectValue, boolean isDynamicQueryRequired,StringBuilder sbQuery) throws Exception{
+		ArrayNode identityArray = (ArrayNode) objectValue.findValue("identifiedBy");
+		List<IdentifiedBy> identityList = new ArrayList<IdentifiedBy>();
 			for (int z = 0; z < identityArray.size(); z++) {
 				TextNode identityproviderValue = (TextNode) identityArray.get(z).get("identityProvider");
 				TextNode identifier = (TextNode) identityArray.get(z).get("identifier");
@@ -782,7 +782,7 @@ public class PersonRepository {
 				if(isDynamicQueryRequired){
 					sbQuery.append(" OR b.IDENTIFIER='"+(identifier.textValue()).trim()+"'");
 				}
-				Identity identity = new Identity(identityproviderValue.textValue(), identifier.textValue());			
+				IdentifiedBy identity = new IdentifiedBy(identityproviderValue.textValue(), identifier.textValue());			
 				identityList.add(identity);
 			}				
 		return identityList;

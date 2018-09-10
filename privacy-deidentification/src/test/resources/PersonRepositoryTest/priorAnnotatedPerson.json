@@ -10,7 +10,7 @@
     "dateModified" : "2018-01-01T08:00.000Z",
     "dataSource" : "http://untrustedDatasource.com/"
   }, {
-  	"property" : "identity",
+  	"property" : "identifiedBy",
   	"value" : {
   		"identifier" : "AliceJones",
   		"identityProvider" : "http://priorIdentityProvider.com"
