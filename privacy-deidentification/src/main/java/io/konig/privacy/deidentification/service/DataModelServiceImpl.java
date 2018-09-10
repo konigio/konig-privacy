@@ -43,5 +43,14 @@ public class DataModelServiceImpl implements DataModelService{
 		}
 		dataModelRepository.deleteDataModel(version);
 	}
+	
+	public void update(String jsonStr,String version) throws DataAccessException {
+		String tempVersion= version.substring(1);
+		if(!dataModelRepository.dataModelExists(tempVersion)){
+			throw new NotFoundException("version=v"+version+" does not exist.");
+		}
+		dataModelRepository.update(jsonStr,version);
+	}
+
 
 }

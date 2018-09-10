@@ -64,5 +64,11 @@ public class DataModelController {
 		return new ResponseEntity<Void>( HttpStatus.OK);
 	}
 	
+	@RequestMapping(value="/schema/{version}" , method = RequestMethod.PUT)
+	public ResponseEntity<?> updateDataModel(@PathVariable("version") String version,@RequestBody String strBody) throws DataAccessException, Exception{
+		dataModelService.update(strBody,version);
+	    return new ResponseEntity<Void>(HttpStatus.OK);
+	}
+
 
 }
