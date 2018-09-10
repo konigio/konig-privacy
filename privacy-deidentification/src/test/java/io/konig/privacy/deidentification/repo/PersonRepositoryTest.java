@@ -162,7 +162,7 @@ public class PersonRepositoryTest {
 		assertTrue(personKeys.getEmail().contains("alice.jones@example.com"));
 		assertTrue(personKeys.getEmail().contains("alice@example.com"));
 		
-		List<IdentifiedBy> identityList = personKeys.getIdentity();
+		List<IdentifiedBy> identityList = personKeys.getIdentifiedBy();
 		assertTrue(identityList != null);
 		assertEquals(2, identityList.size());
 		
