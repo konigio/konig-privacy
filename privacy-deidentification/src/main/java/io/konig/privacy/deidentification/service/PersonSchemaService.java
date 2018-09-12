@@ -12,7 +12,7 @@ import net.spy.memcached.MemcachedClient;
 
 public class PersonSchemaService {
 	
-	private static final String GET_PSEUDONYMS_KEY_PREFIX = "get-psedudonyms-request-v";
+	private static final String GET_PSEUDONYMS_KEY_PREFIX = "get-pseudonyms-request-v";
 	
 	@Autowired
 	private MemcachedClient cache;
