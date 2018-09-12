@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.GregorianCalendar;
 import java.util.List;
 
-import org.apache.commons.beanutils.PropertyUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.http.HttpStatus;
@@ -25,7 +24,6 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.konig.privacy.deidentification.model.DataModel;
-import io.konig.privacy.deidentification.model.IdentifiedBy;
 import io.konig.privacy.deidentification.model.Metadata;
 import io.konig.privacy.deidentification.model.PersonKeys;
 import io.konig.privacy.deidentification.model.PersonWithMetadata;
@@ -33,6 +31,7 @@ import io.konig.privacy.deidentification.model.Provenance;
 import io.konig.privacy.deidentification.repo.DatasourceTrustService;
 import io.konig.privacy.deidentification.repo.DatasourceTrustServiceImpl;
 import io.konig.privacy.deidentification.service.DataModelService;
+import io.konig.privacy.deidentification.service.PersonSchemaService;
 import io.konig.privacy.deidentification.service.PersonService;
 import io.konig.privacy.deidentification.utils.ValidationUtils;
 import io.swagger.annotations.Api;
@@ -57,6 +56,9 @@ public class PersonController {
 
 	@Autowired
 	MemcachedClient cache;
+	
+	@Autowired
+	PersonSchemaService personSchemaService;
 
 	@Autowired
 	private Environment env;
@@ -81,6 +83,11 @@ public class PersonController {
 			PersonKeys keys = new PersonKeys();
 			ArrayNode personArray = (ArrayNode) actualObj.findValue("data");
 			String tempVersion = version.substring(1);
+			
+			// TODO: We might want to consider refactoring the code to extract the datamodel version from the
+			//       request schema (since the data model schema is embedded within).
+			
+			String requestSchema = personSchemaService.pseudonymsRequest(tempVersion);
 			JsonNode jsonSchema = dataModelService.getSchemaByVersion(tempVersion);
 
 			Metadata metaData = new Metadata();
@@ -113,7 +120,7 @@ public class PersonController {
 			
 			for (int i = 0; i < personArray.size(); i++) {
 				ObjectNode personObjectNode = (ObjectNode) personArray.get(i);
-				if (!ValidationUtils.isJsonValid(jsonSchema.toString(), personObjectNode.toString())) {
+				if (!ValidationUtils.isJsonValid(requestSchema, personObjectNode.toString())) {
 					throw new Exception("Schema Validation Failed. Invalid Person data");
 				}
 				personWithMetaData.setPerson(personObjectNode);
