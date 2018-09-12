@@ -33,5 +33,8 @@ public interface DataModelService {
 	public String put(String jsonStr) throws DataAccessException;
 	
 	public void deleteDataModel(String version) throws DataAccessException;
+	
+	public void update(String jsonStr,String version) throws DataAccessException;
+
 
 }

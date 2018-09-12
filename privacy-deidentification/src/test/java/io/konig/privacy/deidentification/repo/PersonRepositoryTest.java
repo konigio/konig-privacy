@@ -28,7 +28,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.konig.privacy.deidentification.model.DataModel;
 import io.konig.privacy.deidentification.model.EnvironmentConstants;
-import io.konig.privacy.deidentification.model.Identity;
+import io.konig.privacy.deidentification.model.IdentifiedBy;
 import io.konig.privacy.deidentification.model.Metadata;
 import io.konig.privacy.deidentification.model.PersonData;
 import io.konig.privacy.deidentification.model.PersonKeys;
@@ -162,11 +162,11 @@ public class PersonRepositoryTest {
 		assertTrue(personKeys.getEmail().contains("alice.jones@example.com"));
 		assertTrue(personKeys.getEmail().contains("alice@example.com"));
 		
-		List<Identity> identityList = personKeys.getIdentity();
+		List<IdentifiedBy> identityList = personKeys.getIdentifiedBy();
 		assertTrue(identityList != null);
 		assertEquals(2, identityList.size());
 		
-		Identity identity = identityList.get(0);
+		IdentifiedBy identity = identityList.get(0);
 		assertEquals("alice.jones", identity.getIdentifier());
 		assertEquals("http://firstIdentityProvider.com", identity.getIdentityProvider());
 		

@@ -25,7 +25,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import io.konig.privacy.deidentification.model.DataModel;
-import io.konig.privacy.deidentification.model.Identity;
+import io.konig.privacy.deidentification.model.IdentifiedBy;
 import io.konig.privacy.deidentification.model.Metadata;
 import io.konig.privacy.deidentification.model.PersonKeys;
 import io.konig.privacy.deidentification.model.PersonWithMetadata;

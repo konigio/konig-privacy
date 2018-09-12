@@ -1,0 +1,240 @@
+{
+  "$schema" : "http://json-schema.org/draft-04/schema#",
+  
+  "definitions":{
+	"address" : {
+      "description" : "The address where the Person receives mail.",
+        "type" : "object",
+        "properties" : {
+          "fullAddress" : {
+            "description" : "The full address of the Person in a single field.",
+            "type" : "string"
+          },
+          "addresseeName" : {
+            "description" : "The name of the addressee",
+            "type" : "string"
+          },
+          "streetAddress1" : {
+            "description" : "The first line of the street address",
+            "type" : "string"
+          },
+          "streetAddress2" : {
+            "description" : "The second line of the street address",
+            "type" : "string"
+          },
+          "streetAddress3" : {
+            "description" : "The third line of the street address",
+            "type" : "string"
+          },
+          "streetAddress4" : {
+            "description" : "The fourth line of the street address",
+            "type" : "string"
+          },
+          "streetAddress" : {
+            "description" : "The complete street address in a single field.",
+            "type" : "string"
+          },
+          "addressLocality" : {
+            "description" : "The locality (typically a city name)",
+            "type" : "string"
+          },
+          "addressRegion" : {
+            "description" : "The region. In some countries, this value is known as the \"state\".",
+            "type" : "string"
+          },
+          "postalCode" : {
+            "description" : "The postal code",
+            "type" : "string"
+          },
+          "addressCountry" : {
+            "description" : "The country",
+            "type" : "string"
+          }
+        }      
+    }
+},
+    
+  "type" : "object",
+  "properties" : {
+    "pseudonym" : {
+      "description" : "A unique identifier for the Person assigned by the De-Identification Service.",
+      "type" : "string"
+    },
+    "email" : {
+      "description" : "An email address of the Person. Used as a unique key to merge Person records.",
+      "type" : "array",
+      "items" : {
+        "type" : "string"
+      }
+    },
+    "identifiedBy" : {
+      "description" : "An entity that records a unique identifier for the Person as defined by some Identity Provider.",
+      "type" : "array",
+      "items" : {
+          "type" : "object",
+          "properties" : {
+            "identifier" : {
+              "description" : "A unique identifier for the Person within the specified Identity Provider.",
+              "type" : "string"
+            },
+            "identityProvider" : {
+              "description" : "The IRI that names the Identity Provider.",
+              "type" : "string",
+              "format" : "uri"
+            }
+          }
+        }      
+    },
+    "givenName" : {
+      "description" : "The given name of the Person. In the US, also known as the first name.",
+      "type" : "string"
+    },
+    "familyName" : {
+      "description" : "The family name of the Person. In the US, also known as the last name.",
+      "type" : "string"
+    },
+    "additionalName" : {
+      "description" : "An additional name for a Person, can be used for a middle name.",
+      "type" : "string"
+    },
+    "name" : {
+      "description" : "The full name of the Person.",
+      "type" : "string"
+    },
+    "nameInitials" : {
+      "description" : "The initials that the Person uses to identify himself or herself.",
+      "type" : "string"
+    },
+    "honorificPrefix" : {
+      "description" : "An honorific prefix preceding a Person's name such as Dr/Mrs/Mr.",
+      "type" : "string"
+    },
+    "honorificSuffix" : {
+      "description" : "An honorific suffix following a Person's name such as M.D. / PhD / MSCSW",
+      "type" : "string"
+    },
+    "personTitle" : {
+      "description" : "A professional or family title. For example, Don or The Right Honorable.",
+      "type" : "string"
+    },
+    "telephone" : {
+      "description" : "A telephone number through which the Person may be reached.",
+      "type" : "array",
+      "items" : {
+        "type" : "string"
+      }
+    },
+    "faxNumber" : {
+      "description" : "A fax number through which the Person may be reached.",
+      "type" : "string"
+    },
+    "tepId" : {
+      "description" : "An identifier for the person in The Enabling Platform.",
+      "type" : "string"
+    },
+    "onecrmId" : {
+      "description" : "An identifier for the person in the OneCRM system.",
+      "type" : "string"
+    },
+    "mailingAddress" : {
+      "description" : "The address where the Person receives mail.",
+       "$ref": "#/definitions/address"  
+    },
+    "otherAddress" : {
+        "$ref" : "#/definitions/address"
+    },
+    "partySite" : {
+      "description" : "A Place with a fixed location that is associated with the Person.",
+      "type" : "array",
+      "items" : {
+          "type" : "object",
+          "properties" : {
+            "address" : {
+              "description" : "The postal address of the site.",				
+                "$ref" : "#/definitions/address"				
+            }
+          }        
+      }
+    },
+    "contactPoint" : {
+      "type" : "array",
+      "items" : {        
+          "type" : "object",
+          "anyOf" : [ {
+            "type" : "object",
+            "properties" : {
+              "contactPointNumber" : {
+                "description" : "A unique identifier for this Contact Point as provided by Pearson's MDM system.",
+                "type" : "string"
+              },
+              "contactPointType" : {
+                "description" : "The type of contact point",
+                "type" : "string",
+                "enum" : [ "contacttype:Phone" ]
+              },
+              "phoneLineType" : {
+                "description" : "The type of phone line",
+                "type" : "string",
+                "format" : "uri"
+              },
+              "countryCode" : {
+                "description" : "The numerical international calling code used as a prefix to the phone number.",
+                "type" : "string"
+              },
+              "areaCode" : {
+                "description" : "The area code",
+                "type" : "string"
+              },
+              "telephoneNumber" : {
+                "description" : "The base telephone number, not including the country code, area code or extension.",
+                "type" : "string"
+              },
+              "extensionNumber" : {
+                "description" : "The extension added as a suffix to the phone number",
+                "type" : "string"
+              },
+              "completeTelephoneNumber" : {
+                "description" : "A single string that encapsulates all known elements of the phone number.",
+                "type" : "string"
+              }
+            }
+          }, {
+            "type" : "object",
+            "properties" : {
+              "contactPointNumber" : {
+                "description" : "A unique identifier for this Contact Point as provided by Pearson's MDM system.",
+                "type" : "string"
+              },
+              "contactPointType" : {
+                "description" : "The type of contact point",
+                "type" : "string",
+                "enum" : [ "contacttype:Email" ]
+              },
+              "email" : {
+                "description" : "The email address through which the Person may be contacted.",
+                "type" : "string"
+              }
+            }
+          }, {
+            "type" : "object",
+            "properties" : {
+              "contactPointNumber" : {
+                "description" : "A unique identifier for this Contact Point as provided by Pearson's MDM system.",
+                "type" : "string"
+              },
+              "contactPointType" : {
+                "description" : "The type of contact point",
+                "type" : "string",
+                "enum" : [ "contacttype:Web" ]
+              },
+              "webUrl" : {
+                "description" : "The address of the web site",
+                "type" : "string"
+              }
+            }
+          } ]        
+      }
+    }
+  }
+    
+}

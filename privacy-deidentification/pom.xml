@@ -10,9 +10,6 @@
   <name>Privacy Personal Model</name>
   <packaging>jar</packaging>
   <description>A data model for personal information and the data sources that provide that information.</description>
-  <properties>
-  <docker.registry.host>https://${aws-account-id}.dkr.ecr.${aws-region}.amazonaws.com</docker.registry.host>
-  </properties>
   <dependencies>
 	
 		<dependency>
@@ -127,11 +124,12 @@
 		    <artifactId>spymemcached</artifactId>
 		    <version>2.12.3</version>
 		</dependency>
-    <dependency>
-    <groupId>com.opencsv</groupId>
-    <artifactId>opencsv</artifactId>
-    <version>4.2</version>
-</dependency>
+	    <dependency>
+	    <groupId>com.opencsv</groupId>
+	    <artifactId>opencsv</artifactId>
+	    <version>4.2</version>
+	</dependency>
+
   </dependencies>
 
 	<build>
@@ -151,17 +149,18 @@
 				<configuration>
 					<mainClass>io.konig.privacy.deidentification.Application</mainClass>
 					<layout>JAR</layout>
+					<classifier>exec</classifier>
 				</configuration>
 				 <executions>
 					<execution>
 						<goals>
 							<goal>repackage</goal> 
-						</goals> 
+						</goals>					
 					</execution> 
 				</executions>
 			</plugin>
 			
-		  	<plugin>
+		  	   <plugin>
 				<groupId>io.fabric8</groupId>
 				<artifactId>docker-maven-plugin</artifactId>
 				<version>0.24.0</version>			
@@ -176,11 +175,23 @@
 									<exec>
 										<arg>java</arg>
 										<arg>-jar</arg>
-										<arg>maven/privacy-personal-model-1.0.0-SNAPSHOT.jar</arg>
+										<arg>maven/privacy-personal-model-1.0.0-SNAPSHOT-exec.jar</arg>
 									</exec>
 								</entryPoint>			
-								<assembly>			
-									<descriptorRef>artifact-with-dependencies</descriptorRef>
+								<assembly>
+									<inline>
+										<files>
+											<file>
+												<source>target/privacy-personal-model-1.0.0-SNAPSHOT-exec.jar</source>
+												<outputDirectory>.</outputDirectory>
+											</file>
+										</files>
+										<dependencySets>
+											<dependencySet>
+												<outputDirectory>.</outputDirectory>
+											</dependencySet>
+										</dependencySets>
+									</inline>
 								</assembly>
 								<ports>
 									<port>8080</port>

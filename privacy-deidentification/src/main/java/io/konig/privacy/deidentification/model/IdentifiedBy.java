@@ -7,7 +7,7 @@ import java.util.Objects;
  * @author Greg McFall
  *
  */
-public class Identity {
+public class IdentifiedBy {
 
 	private String identityProvider;
 	private String identifier;
@@ -17,7 +17,7 @@ public class Identity {
 	 * @param identityProvider  The fully-qualified IRI for the identify provider.
 	 * @param identifier The identifier for the target Person within the specified identity provider.
 	 */
-	public Identity(String identityProvider, String identifier) {
+	public IdentifiedBy(String identityProvider, String identifier) {
 		this.identityProvider = identityProvider;
 		this.identifier = identifier;
 	}
@@ -43,10 +43,10 @@ public class Identity {
 
 		if (o == this)
 			return true;
-		if (!(o instanceof Identity)) {
+		if (!(o instanceof IdentifiedBy)) {
 			return false;
 		}
-		Identity identity = (Identity) o;
+		IdentifiedBy identity = (IdentifiedBy) o;
 		return identity.getIdentityProvider().equals(identityProvider) && identity.getIdentifier().equals(identifier);
 	}
 	

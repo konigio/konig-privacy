@@ -92,4 +92,11 @@ public class DataModelRepository {
 		template.update(deleteDataModelQuery, version.substring(1));
 
 	}
+	
+	public void update(String jsonStr,String version){		
+		
+		String updateDataModelQuery="UPDATE DE_IDENTIFICATION.DATA_MODEL SET JSONSCHEMA=? WHERE VERSION=?";
+		template.update(updateDataModelQuery, jsonStr,version.substring(1));
+	}
+
 }

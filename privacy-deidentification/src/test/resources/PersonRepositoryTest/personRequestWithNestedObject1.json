@@ -6,7 +6,7 @@
 		"contactOption" : "TollFree",
 		"areaServed" : "UK"
 	},
-	"identity" : [{
+	"identifiedBy" : [{
 		"identifier" : "alice.jones",
 		"identityProvider" : "http://firstIdentityProvider.com"
 	}, {
