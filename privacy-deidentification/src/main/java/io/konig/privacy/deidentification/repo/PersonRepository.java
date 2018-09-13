@@ -40,6 +40,7 @@ import io.konig.privacy.deidentification.model.PersonData;
 import io.konig.privacy.deidentification.model.PersonKeys;
 import io.konig.privacy.deidentification.model.PersonWithMetadata;
 import io.konig.privacy.deidentification.model.Provenance;
+import io.konig.privacy.deidentification.service.DataAccessException;
 
 @Repository
 @Transactional
@@ -846,7 +847,7 @@ public class PersonRepository {
 		return jsonNode;
 	}
 	
-	public boolean annotatedPIIExists(String version, String pseudonym) {
+	public boolean piiExists(String version, String pseudonym) {
 		String query = "SELECT COUNT(*) FROM DE_IDENTIFICATION.PERSON WHERE VERSION=? and PSEUDONYM=?";
 		int count = template.queryForObject(query, Integer.class, version,pseudonym);
 		if (count == 0) {
@@ -861,6 +862,43 @@ public class PersonRepository {
 		double trustLevel= template.queryForObject(query, double.class,id);
 		//cache.set(datasourceData.getId(), Integer.parseInt(env.getProperty("aws.memcache.expirytime")), datasourceData.getTrustLevel());
 		return trustLevel;
+	}
+	
+	public JsonNode getBatchSensitivePII(String Version,ArrayList<String> pseudonym) throws DataAccessException, JsonProcessingException, IOException {
+		ObjectMapper finalMapper = new ObjectMapper();
+		JsonNode jsonNode = finalMapper.createObjectNode();
+		StringBuilder sb=new StringBuilder("SELECT PERSON_DATA,PSEUDONYM, ANNOTATED_PERSON_DATA FROM DE_IDENTIFICATION.PERSON WHERE (");
+		String or = "";
+		for (int i=0; i<pseudonym.size(); i++) {
+			sb.append(or);
+			or = " OR ";					
+			sb.append(" PSEUDONYM=?");			
+		}
+		sb.append(')');
+		
+		String sql = sb.toString();
+		
+		Object[] args = pseudonym.toArray();
+		int[] argTypes = new int[args.length];		
+		Arrays.fill(argTypes, java.sql.Types.VARCHAR);
+		
+		
+		RowMapper<PersonData> rowMapper = new PersonDataRowMapper();
+	
+		List<PersonData> pojoList = template.query(sql, args, argTypes, rowMapper);
+		
+		ObjectMapper mapper=new ObjectMapper();
+		ArrayNode array = mapper.createArrayNode();		
+		for(int i=0;i<pojoList.size();i++){
+			ObjectMapper personMapper = new ObjectMapper();
+			JsonNode personNode=personMapper.readTree(pojoList.get(i).getPerson());
+			((ObjectNode) personNode).put("pseudonym",pojoList.get(i).getPseudonym());
+			array.add(personNode);
+			
+		}
+		
+		((ObjectNode) jsonNode).set("pii", array);
+		return jsonNode;
 	}
 
 }
