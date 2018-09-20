@@ -3,6 +3,8 @@ package io.konig.privacy.deidentification.service;
 import java.io.IOException;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
+import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -10,22 +12,22 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import net.spy.memcached.MemcachedClient;
 
+@Service
 public class PersonSchemaService {
 	
 	private static final String GET_PSEUDONYMS_KEY_PREFIX = "get-pseudonyms-request-v";
 	
 	@Autowired
 	private MemcachedClient cache;
-	
-	@Autowired
-	private int memcacheExpiryTime;
-	
+		
 	@Autowired
 	private DataModelService dataModelService;
 	
-	public PersonSchemaService(MemcachedClient cache, int memcacheExpiryTime, DataModelService dataModelService) {
+	@Autowired
+	private Environment env;
+	
+	public PersonSchemaService(MemcachedClient cache, DataModelService dataModelService) {
 		this.cache = cache;
-		this.memcacheExpiryTime = memcacheExpiryTime;
 		this.dataModelService = dataModelService;
 	}
 
@@ -37,13 +39,6 @@ public class PersonSchemaService {
 		this.cache = cache;
 	}
 
-	public int getMemcacheExpiryTime() {
-		return memcacheExpiryTime;
-	}
-
-	public void setMemcacheExpiryTime(int memcacheExpiryTime) {
-		this.memcacheExpiryTime = memcacheExpiryTime;
-	}
 
 	public DataModelService getDataModelService() {
 		return dataModelService;
@@ -102,7 +97,7 @@ public class PersonSchemaService {
 			
 			
 			jsonSchema = jsonSchemaNode.toString();
-			cache.set(key, memcacheExpiryTime, jsonSchema);
+			cache.set(key, Integer.parseInt(env.getProperty("aws.memcache.expirytime")), jsonSchema);
 		}
 		return jsonSchema;
 	}

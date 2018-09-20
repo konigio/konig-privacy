@@ -1,27 +1,38 @@
 package io.konig.privacy.deidentification.service;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.when;
 
+import java.io.InputStream;
 import java.util.StringTokenizer;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.core.env.Environment;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import io.konig.privacy.deidentification.utils.ValidationUtils;
 import net.spy.memcached.MemcachedClient;
+import net.spy.memcached.internal.OperationFuture;
 
 public class PersonSchemaServiceTest {
 	
 	private static String VERSION = "1";
 	
+	private static String VERSION_2 = "2";
+	
 	@Mock
 	MemcachedClient cache;
+	
+	@Mock
+	Environment env;
 
 	@Mock
 	DataModelService dataModelService;
@@ -31,7 +42,10 @@ public class PersonSchemaServiceTest {
 	@Before
 	public void setUp() throws Exception {
 		MockitoAnnotations.initMocks(this);
-		schemaService = new PersonSchemaService(cache, 100, dataModelService);
+		schemaService = new PersonSchemaService(cache, dataModelService);
+		
+		final CountDownLatch latch = new CountDownLatch(1);
+		
 		
 		JsonBuilder builder = new JsonBuilder();
 		
@@ -45,8 +59,15 @@ public class PersonSchemaServiceTest {
 				.endObject("properties")
 			.end();
 		
+		ObjectNode dataModelJsonSchema = loadJson("PersonRepositoryTest/GBIDataModelSchema.json");
+		
 		when(dataModelService.getSchemaByVersion(VERSION)).thenReturn(dataModelSchema);
+		
+		when(dataModelService.getSchemaByVersion(VERSION_2)).thenReturn(dataModelJsonSchema);
+		
 		when(cache.get(VERSION)).thenReturn(null);
+		
+		when(cache.set(VERSION, Integer.parseInt("1"), dataModelJsonSchema)).thenReturn(null);
 	}
 	
 	@Test
@@ -73,6 +94,28 @@ public class PersonSchemaServiceTest {
 			}
 		}
 		return node.asText();
+	}
+	
+	private ObjectNode loadJson(String path) throws Exception {
+		InputStream input = getClass().getClassLoader().getResourceAsStream(path);
+		ObjectMapper mapper = new ObjectMapper();
+		ObjectNode node = (ObjectNode) mapper.readTree(input);
+		input.close();
+
+		return node;
+	}
+	
+	@Test
+	public void jsonValidationTest() throws Exception {
+		
+		String dataModelSchema = schemaService.pseudonymsRequest(VERSION_2);
+		
+		ObjectNode personrequest = loadJson("PersonRepositoryTest/GBIPersonRequest.json");
+		
+		boolean validation=ValidationUtils.isJsonValid(dataModelSchema, personrequest.toString());
+		
+		assertTrue(validation);
+
 	}
 
 }
