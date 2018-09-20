@@ -90,7 +90,10 @@ public class PersonSchemaService {
 							.endObject("header")
 						.endObject("properties")
 					.endObject("header")
-					.set("data", dataModelJson)
+					.beginObject("data")
+						.put("type", "array")
+						.set("items", dataModelJson)
+					.endObject("data")
 				.endObject("properties")
 				.set("definitions", definitions)
 				.end();
