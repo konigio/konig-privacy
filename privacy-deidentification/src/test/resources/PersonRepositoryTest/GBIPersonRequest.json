@@ -18,7 +18,7 @@
 		"contactPointType" : "contacttype:Email",
 		"email" : "Tanji@example.com"
 	}],
-	"identity" : [{
+	"identifiedBy" : [{
 		"identityProvider" : "https://schema.pearson.com/idam",
 		"identifier" : "1234567"		
 	}, {

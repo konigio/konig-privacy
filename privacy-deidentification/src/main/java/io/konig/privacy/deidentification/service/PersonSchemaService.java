@@ -26,10 +26,13 @@ public class PersonSchemaService {
 	@Autowired
 	private Environment env;
 	
-	public PersonSchemaService(MemcachedClient cache, DataModelService dataModelService) {
+	public PersonSchemaService(MemcachedClient cache, DataModelService dataModelService, Environment env) {
 		this.cache = cache;
 		this.dataModelService = dataModelService;
+		this.env = env;
 	}
+	
+	
 
 	public MemcachedClient getCache() {
 		return cache;
