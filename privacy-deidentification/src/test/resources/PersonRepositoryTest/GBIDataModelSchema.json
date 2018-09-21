@@ -239,7 +239,7 @@
 								"description": "The address of the web site",
 								"type": "string"
 							}
-						}
+						},"additionalProperties": false
 					}
 				]
 			}

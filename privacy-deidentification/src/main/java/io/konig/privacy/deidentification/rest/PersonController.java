@@ -3,6 +3,7 @@ package io.konig.privacy.deidentification.rest;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.GregorianCalendar;
+import java.util.Iterator;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +23,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.github.fge.jsonschema.core.report.ProcessingMessage;
+import com.github.fge.jsonschema.core.report.ProcessingReport;
+import com.github.fge.jsonschema.main.JsonSchema;
 
 import io.konig.privacy.deidentification.model.DataModel;
 import io.konig.privacy.deidentification.model.Metadata;
@@ -73,7 +77,7 @@ public class PersonController {
 			@RequestBody String strBody) throws Exception {
 		List<PersonKeys> personKeyList = new ArrayList<PersonKeys>();
 		ObjectMapper mapper = new ObjectMapper();
-		
+		ObjectMapper jsonSchemaMapper = new ObjectMapper();
 		DatasourceTrustService.instance.set(new DatasourceTrustServiceImpl(template, cache, env));
 		
 		try {
@@ -88,12 +92,30 @@ public class PersonController {
 			//       request schema (since the data model schema is embedded within).
 			
 			String requestSchema = personSchemaService.pseudonymsRequest(tempVersion);
-			JsonNode jsonSchema = dataModelService.getSchemaByVersion(tempVersion);
+			
+			System.out.println("requestSchema"+requestSchema);
+			
+			JsonSchema schemaNode = ValidationUtils.getSchemaNode(requestSchema);
+			
+			ProcessingReport report = schemaNode.validate(actualObj);
+			
+			if(!report.isSuccess()){
+				Iterator<ProcessingMessage> sequence = report.iterator();
+				String error=null;
+		        while (sequence.hasNext()) {
+		        	ProcessingMessage msg = sequence.next();
+		        	error=msg.getMessage();
+		        	System.out.println(msg.getMessage());
+		        }
+		        throw new Exception("Schema Validation Failed. Invalid Person data due to "+error);
+			}
+						
 
 			Metadata metaData = new Metadata();
 			DataModel dataModel = new DataModel();
 			dataModel.setVersion(version);
-			dataModel.setJsonSchema(jsonSchema);
+			JsonNode jsonNodeSchema=jsonSchemaMapper.readTree(requestSchema);
+			dataModel.setJsonSchema(jsonNodeSchema);
 			metaData.setDataModel(dataModel);
 			Provenance provenance = new Provenance();
 			String dataSourceId = actualObj.findValue("datasource").textValue();
@@ -120,9 +142,7 @@ public class PersonController {
 			
 			for (int i = 0; i < personArray.size(); i++) {
 				ObjectNode personObjectNode = (ObjectNode) personArray.get(i);
-				if (!ValidationUtils.isJsonValid(requestSchema, personObjectNode.toString())) {
-					throw new Exception("Schema Validation Failed. Invalid Person data");
-				}
+			
 				personWithMetaData.setPerson(personObjectNode);
 				personWithMetaData.setMetadata(metaData);
 				keys = personService.postSensitivePII(personWithMetaData);
