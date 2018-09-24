@@ -92,9 +92,7 @@ public class PersonController {
 			//       request schema (since the data model schema is embedded within).
 			
 			String requestSchema = personSchemaService.pseudonymsRequest(tempVersion);
-			
-			System.out.println("requestSchema"+requestSchema);
-			
+						
 			JsonSchema schemaNode = ValidationUtils.getSchemaNode(requestSchema);
 			
 			ProcessingReport report = schemaNode.validate(actualObj);
@@ -104,8 +102,7 @@ public class PersonController {
 				String error=null;
 		        while (sequence.hasNext()) {
 		        	ProcessingMessage msg = sequence.next();
-		        	error=msg.getMessage();
-		        	System.out.println(msg.getMessage());
+		        	error=msg.getMessage();		        	
 		        }
 		        throw new Exception("Schema Validation Failed. Invalid Person data due to "+error);
 			}
