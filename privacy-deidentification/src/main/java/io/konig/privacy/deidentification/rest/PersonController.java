@@ -159,5 +159,21 @@ public class PersonController {
 		JsonNode jsonNode = personService.getAnnotatedSensitivePII(version, pseudonym);
 		return new ResponseEntity<JsonNode>(jsonNode, HttpStatus.OK);
 	}
+	
+	@RequestMapping(value = "/privacy/{version}/person/batch", method = RequestMethod.POST)
+	@ResponseBody
+	public ResponseEntity<JsonNode> getBatchSensitivePII(@PathVariable("version") String version,
+			@RequestBody String strBody) throws Exception {
+		ObjectMapper mapper = new ObjectMapper();
+		JsonNode requestJson = mapper.readTree(strBody);
+		ArrayNode pseudonymArray = (ArrayNode) requestJson.findValue("pseudonyms");
+		ArrayList<String> pseudonym= new ArrayList<String>();
+		for(int i = 0; i < pseudonymArray.size(); i++){
+			pseudonym.add(pseudonymArray.get(i).textValue());
+		}
+		JsonNode jsonNode= personService.getBatchSensitivePII(version, pseudonym);
+		return new ResponseEntity<JsonNode>(jsonNode, HttpStatus.OK);
+		
+	}
 
 }

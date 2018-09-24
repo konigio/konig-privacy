@@ -2,6 +2,7 @@ package io.konig.privacy.deidentification.service;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -43,10 +44,20 @@ public class PersonServiceImpl implements PersonService {
 	
 	@Override
 	public JsonNode getAnnotatedSensitivePII (String version, String pseudonym) throws DataAccessException, JsonProcessingException, IOException {
-		if(!personRepository.annotatedPIIExists(version,pseudonym)){
+		if(!personRepository.piiExists(version,pseudonym)){
 			throw new NotFoundException("Person data not exists");
 		}
 		JsonNode jsonNode= personRepository.getAnnotatedSensitivePII(version,pseudonym); 
+		return jsonNode;
+	}
+	@Override
+	public JsonNode getBatchSensitivePII(String version, ArrayList<String> pseudonym) throws DataAccessException, JsonProcessingException, IOException {
+		for(int i=0;i<pseudonym.size();i++){
+			if(!personRepository.piiExists(version,pseudonym.get(i))){
+				throw new NotFoundException("Person data not exists");
+			}
+		}
+		JsonNode jsonNode=personRepository.getBatchSensitivePII(version,pseudonym);
 		return jsonNode;
 	}
 

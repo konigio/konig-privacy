@@ -2,6 +2,7 @@ package io.konig.privacy.deidentification.service;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 
 import org.springframework.web.client.HttpClientErrorException;
 
@@ -66,5 +67,7 @@ public interface PersonService {
 	 * @throws JsonProcessingException 
 	 */
 	public JsonNode getAnnotatedSensitivePII(String version,String pseudonym) throws DataAccessException, JsonProcessingException, IOException;
+	
+	public JsonNode getBatchSensitivePII(String version, ArrayList<String> pseudonym) throws DataAccessException,JsonProcessingException, IOException;
 
 }
