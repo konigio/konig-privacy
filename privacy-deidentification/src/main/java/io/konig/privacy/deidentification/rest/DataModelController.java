@@ -21,10 +21,16 @@ import com.fasterxml.jackson.databind.JsonNode;
 
 import io.konig.privacy.deidentification.service.DataAccessException;
 import io.konig.privacy.deidentification.service.DataModelService;
+import io.konig.privacy.deidentification.service.PersonSchemaService;
+import net.spy.memcached.MemcachedClient;
 
 @RestController
 @RequestMapping(value={"/api"}) 
 public class DataModelController {
+
+
+	@Autowired
+	MemcachedClient cache;
 	
 	@Autowired
 	DataModelService dataModelService;
@@ -67,6 +73,8 @@ public class DataModelController {
 	@RequestMapping(value="/schema/{version}" , method = RequestMethod.PUT)
 	public ResponseEntity<?> updateDataModel(@PathVariable("version") String version,@RequestBody String strBody) throws DataAccessException, Exception{
 		dataModelService.update(strBody,version);
+		String key = PersonSchemaService.getPseudonymsCacheKey(version);
+		cache.delete(key);
 	    return new ResponseEntity<Void>(HttpStatus.OK);
 	}
 
