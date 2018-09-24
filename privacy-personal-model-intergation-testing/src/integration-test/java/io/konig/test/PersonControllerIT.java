@@ -9,6 +9,8 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -33,6 +35,7 @@ import com.fasterxml.jackson.databind.node.TextNode;
 import java.io.File;
 
 import io.konig.privacy.deidentification.Application;
+import io.konig.privacy.deidentification.repo.DatasourceTrustServiceImpl;
 
 import org.apache.maven.shared.invoker.DefaultInvocationRequest;
 import org.apache.maven.shared.invoker.DefaultInvoker;
@@ -62,6 +65,8 @@ import java.io.FileNotFoundException;
 @AutoConfigureMockMvc(secure=false)
 public class PersonControllerIT 
 {
+	
+	private static Logger logger = LoggerFactory.getLogger(PersonControllerIT.class);
 	@Autowired
 	private MockMvc mockMvc;
 	
@@ -96,7 +101,7 @@ public class PersonControllerIT
 		
 	}
 	
-	@Test
+	@Ignore
 	public void integrationTestGBI() throws Exception {
 		ObjectMapper mapper = new ObjectMapper();
 		String workingdir=System.getProperty("user.dir");
@@ -163,6 +168,97 @@ public class PersonControllerIT
 		assertEquals(HttpStatus.OK.value(), annotatedpersonResponse.getStatus());
 		
 		ObjectMapper annotatedPersonMapper = new ObjectMapper();
+		
+		JsonNode annotationData = annotatedPersonMapper.readTree(annotatedpersonResponse.getContentAsString());
+		
+		ArrayNode annotationArray= (ArrayNode) annotationData.get("graph");
+		boolean emailflag=false;
+		for (int i=0; i<annotationArray.size(); i++) {
+			JsonNode node = annotationArray.get(i);
+			String propertyName = node.get("property").asText();
+			String emailValue= node.get("value").asText();
+			if ("email".equals(propertyName) && emailValue.equals("Tanji@example.com")) {
+				emailflag=true;
+				break;
+			}
+		}
+		assertTrue(emailflag);
+				
+	}
+	
+	@Test
+	public void integrationTest2GBI() throws Exception {
+		ObjectMapper mapper = new ObjectMapper();
+		String workingdir=System.getProperty("user.dir");
+				
+		
+		JsonNode dataModelNode=mapper.readTree(new File(workingdir+"/src/integration-test/resources/GBIDataModelRequest.json"));
+		RequestBuilder requestBuilder = MockMvcRequestBuilders
+				.put("/api/schema/v1")
+				.accept(MediaType.APPLICATION_JSON).content(dataModelNode.toString())
+				.contentType(MediaType.APPLICATION_JSON).header("Authorization", "Basic dGVzdDp0ZXN0MTIz");
+		
+		MvcResult dataModelresult = mockMvc.perform(requestBuilder).andReturn();
+		
+		MockHttpServletResponse dataModelresponse = dataModelresult.getResponse();
+		
+
+		
+		assertEquals(HttpStatus.OK.value(), dataModelresponse.getStatus());
+		
+						
+		ObjectMapper personMapper = new ObjectMapper();		
+		JsonNode personnode=personMapper.readTree(new File(workingdir+"/src/integration-test/resources/GBIPersonRequest.json"));
+		RequestBuilder personRequestBuilder = MockMvcRequestBuilders
+				.post("/api/privacy/v1/person")
+				.accept(MediaType.APPLICATION_JSON).content(personnode.toString())
+				.contentType(MediaType.APPLICATION_JSON).header("Authorization", "Basic dGVzdDp0ZXN0MTIz");
+		
+		MvcResult personResult = mockMvc.perform(personRequestBuilder).andReturn();
+		
+		MockHttpServletResponse personResponse = personResult.getResponse();
+			
+		assertEquals(HttpStatus.CREATED.value(), personResponse.getStatus());
+		
+		ObjectMapper personResponseMapper=new ObjectMapper();
+		
+		
+		logger.info("Response for Post Sensitive PII"+personResponse.getContentAsString());
+		
+		JsonNode personresponseNode= personResponseMapper.readTree(personResponse.getContentAsString());
+		
+		String pseudonym=personresponseNode.findValue("pseudonym").textValue();
+		
+		assertNotNull(pseudonym);
+		
+		String email=null;
+		
+		JsonNode personNode = personresponseNode.path("data");
+		ArrayNode emailArray = (ArrayNode)personresponseNode.findValue("email");
+		for (int j = 0; j < emailArray.size(); j++) {
+			TextNode objectValue =  (TextNode) emailArray.get(j);				
+			email=objectValue.asText();
+		}		
+			
+		
+		assertNotNull(email);
+		
+		assertEquals("Tanji@example.com",email);
+				
+	
+		RequestBuilder annotatedPersonRequestBuilder = MockMvcRequestBuilders
+				.get("/api/privacy/v1/person/"+pseudonym+"/.annotated")
+				.contentType(MediaType.APPLICATION_JSON).header("Authorization", "Basic dGVzdDp0ZXN0MTIz");
+		
+		MvcResult annotatedPersonResult = mockMvc.perform(annotatedPersonRequestBuilder).andReturn();
+		
+		MockHttpServletResponse annotatedpersonResponse = annotatedPersonResult.getResponse();
+		
+		assertEquals(HttpStatus.OK.value(), annotatedpersonResponse.getStatus());
+		
+		ObjectMapper annotatedPersonMapper = new ObjectMapper();
+		
+		logger.info("Response for Get Annotated PII"+annotatedpersonResponse.getContentAsString());
 		
 		JsonNode annotationData = annotatedPersonMapper.readTree(annotatedpersonResponse.getContentAsString());
 		
