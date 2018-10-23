@@ -11,6 +11,7 @@ import org.springframework.boot.autoconfigure.jdbc.DataSourceBuilder;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Profile;
 import org.springframework.core.env.Environment;
 
 import net.spy.memcached.AddrUtil;
@@ -39,9 +40,28 @@ public class Application  {
 					AddrUtil.getAddresses(env.getProperty("aws.memcache.endpoint")));
 	 }
 	
-	 @Bean(value = "datasource")
-	    @ConfigurationProperties("spring.datasource")
-	    public DataSource dataSource() {
-	        return DataSourceBuilder.create().build();
-	    }
+	@Bean(value = "datasource")
+	@ConfigurationProperties("spring.datasource")
+	public DataSource dataSource() {
+		return DataSourceBuilder.create().build();
+	}
+	
+
+	@Profile("dev")
+	@Bean
+	public String devBean() {
+		return "dev";
+	}
+
+	@Profile("qa")
+	@Bean
+	public String qaBean() {
+		return "qa";
+	}
+
+	@Profile("prod")
+	@Bean
+	public String prodBean() {
+		return "prod";
+	}
 }
