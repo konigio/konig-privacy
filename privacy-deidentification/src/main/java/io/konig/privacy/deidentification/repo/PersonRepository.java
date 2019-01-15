@@ -76,7 +76,6 @@ public class PersonRepository {
 
 	public PersonKeys put(PersonWithMetadata metaPerson) throws HttpClientErrorException, IOException,Exception {
 		PersonKeys keys = null;
-		
 		PersonData personData = loadPersonData(metaPerson);
 		if (personData == null) {
 			keys = insert(metaPerson);
@@ -94,7 +93,6 @@ public class PersonRepository {
 	private PersonKeys merge(PersonWithMetadata metaPerson, PersonData personData) {
 		PersonKeys keys = new PersonKeys();
 		Provenance provenance = metaPerson.getMetadata().getProvenance();
-		
 		keys.setPseudonym(personData.getPseudonym());
 		
 		ObjectMapper objectMapper = new ObjectMapper();
@@ -106,10 +104,9 @@ public class PersonRepository {
 			
 			String receivedAtTime = isoTimestampFormat.format(provenance.getReceivedAtTime().getTime());
 			String receivedFrom = provenance.getReceivedFrom();
+						
 			
 			double receivedFromTrustLevel = trustService.getTrustLevel(receivedFrom);
-			
-			
 			MergeInfo mergeInfo = new MergeInfo(objectMapper, receivedAtTime, receivedFrom, receivedFromTrustLevel, trustService);
 			
 			doMerge(mergeInfo, requestData, (ArrayNode) annotationData.get("graph"), keys);
@@ -135,7 +132,6 @@ public class PersonRepository {
 		
 		// TODO: The logic for inserting vs. updating records in the PERSON_IDENTITY table is not correct.
 		// Greg will fix this later.
-
 		ObjectMapper objectMapper = mergeInfo.getObjectMapper();
 		Iterator<String> fieldNames = requestObject.fieldNames();
 		String dateModifiedValue = mergeInfo.getReceivedAtTime();
@@ -151,6 +147,7 @@ public class PersonRepository {
 		
 		collectDirectIdentifiers(emailSet, identityMap, annotations);
 		
+		List<String> emailList = new ArrayList<String>();
 		while (fieldNames.hasNext()) {
 			String fieldName = fieldNames.next();
 			JsonNode requestValue = requestObject.get(fieldName);
@@ -165,15 +162,16 @@ public class PersonRepository {
 					
 					ObjectNode annotationNode = annotatedIdentity(annotations, identityProviderValue, identifierValue);
 					
+					IdentifiedBy identity = new IdentifiedBy(identityProviderValue, identifierValue);
+					identityList.add(identity);
 					if (annotationNode == null) {
 						// There is no existing annotated Identity, so create a new annotated value and add it to the list.
 						ObjectNode value = objectMapper.createObjectNode();
 						value.put("identifier", identifierValue);
 						value.put("identityProvider", identityProviderValue);
 						addAnnotation(mergeInfo, annotations, "identifiedBy", value);
-						IdentifiedBy identity = new IdentifiedBy(identityProviderValue, identifierValue);
-						identityList.add(identity);
-						diffIdentityList.add(identity);
+						IdentifiedBy newIdentity = new IdentifiedBy(identityProviderValue, identifierValue);
+						diffIdentityList.add(newIdentity);
 						
 						identityMap.put(identityProviderValue, identity);
 						
@@ -183,8 +181,6 @@ public class PersonRepository {
 						identityNode.put("identifier", identifierValue);
 						annotationNode.put("dateModified", dateModifiedValue);
 						annotationNode.put("dataSource", dataSourceValue);
-						IdentifiedBy identity = new IdentifiedBy(identityProviderValue, identifierValue);
-						identityList.add(identity);
 					}
 				}
 				
@@ -195,22 +191,21 @@ public class PersonRepository {
 				ArrayNode emailArray = (ArrayNode) requestValue;
 				for (int i=0; i<emailArray.size(); i++) {
 					String requestEmail = emailArray.get(i).asText();
-					emailSet.add(requestEmail);
-					
-					ObjectNode annotationNode = annotatedEmail(annotations, requestEmail);
-
-					JsonNode emailValue = JsonNodeFactory.instance.textNode(requestEmail);
-					
-					if (annotationNode == null) {
-						// There is no existing record of the given email address, so add a new annotated record.
-						addAnnotation(mergeInfo, annotations, "email", emailValue);
-						diffEmailList.add(emailValue.asText());
-					} else if (overwrite(mergeInfo, annotationNode)) {
-						annotationNode.set("value", emailValue);
-						annotationNode.put("dateModified", dateModifiedValue);
-						annotationNode.put("dataSource", dataSourceValue);
+					emailList.add(requestEmail);
+						
+						ObjectNode annotationNode = annotatedEmail(annotations, requestEmail);
+	
+						JsonNode emailValue = JsonNodeFactory.instance.textNode(requestEmail);						
+						if (annotationNode == null) {
+							// There is no existing record of the given email address, so add a new annotated record.							
+							addAnnotation(mergeInfo, annotations, "email", emailValue);
+							diffEmailList.add(emailValue.asText());							
+						} else if (overwrite(mergeInfo, annotationNode)) {
+							annotationNode.set("value", emailValue);
+							annotationNode.put("dateModified", dateModifiedValue);
+							annotationNode.put("dataSource", dataSourceValue);
+						}
 					}
-				}
 				
 			} else {
 				
@@ -235,10 +230,11 @@ public class PersonRepository {
 		
 		JsonNode simpleJson=getSimpleJson(annotations);
 		
+		
 		String updateQuery = "UPDATE DE_IDENTIFICATION.PERSON SET  ANNOTATED_PERSON_DATA=?, PERSON_DATA=? WHERE PSEUDONYM=?";
 		template.update(updateQuery, annotedJsonNode.toString(), simpleJson.toString(), keys.getPseudonym());
 		
-
+		
 		//This block is for adding new email and Identity elements received during Merge
 		for(int z=0;z<ListUtils.emptyIfNull(diffEmailList).size();z++){
 			String queryEmail = "INSERT INTO  DE_IDENTIFICATION.PERSON_IDENTITY (PERSON_PSEUDONYM, IDENTITY_PROVIDER,IDENTIFIER) VALUES (?,?,?)";
@@ -249,8 +245,7 @@ public class PersonRepository {
 			String queryIdentity = "INSERT INTO  DE_IDENTIFICATION.PERSON_IDENTITY (PERSON_PSEUDONYM, IDENTITY_PROVIDER,IDENTIFIER) VALUES (?,?,?)";
 			template.update(queryIdentity, keys.getPseudonym(),diffIdentityList.get(y).getIdentityProvider() ,diffIdentityList.get(y).getIdentifier());
 		}
-		
-		List<String> emailList = new ArrayList<>(emailSet);
+				
 		
 		keys.setEmail(emailList);
 		keys.setIdentifiedBy(identityList);
@@ -460,7 +455,6 @@ public class PersonRepository {
 	 */
 	private PersonKeys insert(PersonWithMetadata metaPerson) throws Exception {
 		// TODO Auto-generated method stub
-		
 		String pseudonym = generatePseudonym();
 		PersonKeys keys=new PersonKeys();
 		keys.setPseudonym(pseudonym);
@@ -479,6 +473,7 @@ public class PersonRepository {
 		if(identityNodeList instanceof ArrayNode)
 			identityList=getIdentityList(metaPerson.getPerson());
 		
+		
 		//Storing the Identifiers in the DB
 		for(int k=0;k<ListUtils.emptyIfNull(emailList).size();k++){
 			String queryPersonIdentity = "INSERT INTO  DE_IDENTIFICATION.PERSON_IDENTITY (PERSON_PSEUDONYM, IDENTITY_PROVIDER,IDENTIFIER) VALUES (?,?,?)";
@@ -489,9 +484,11 @@ public class PersonRepository {
 			template.update(queryPersonIdentity, pseudonym, identityList.get(l).getIdentityProvider(),identityList.get(l).getIdentifier());			
 		}
 		
-		
+
 		keys.setEmail(emailList);
 		keys.setIdentifiedBy(identityList);;
+		
+		
 		return keys;
 	}
 	
@@ -533,7 +530,7 @@ public class PersonRepository {
 		JsonNode emailNode = personNode.get("email");
 		if (emailNode instanceof ArrayNode) {
 			for (int i=0; i<emailNode.size(); i++) {
-				String emailValue = emailNode.get(i).asText();				
+				String emailValue = emailNode.get(i).asText();
 				argList.add(URN_EMAIL);
 				argList.add(emailValue);
 			}
@@ -550,6 +547,7 @@ public class PersonRepository {
 				IdentifiedBy id= new IdentifiedBy(identityProvider,identifier);
 				arg1List.add(identityProvider);
 				arg1List.add(identifier);
+
 			}
 		}
 		
@@ -576,6 +574,7 @@ public class PersonRepository {
 		sb.append(')');
 
 		String sql = sb.toString();
+
 		
 		Object[] args = argFinal.toArray();
 		int[] argTypes = new int[args.length];		
@@ -583,10 +582,9 @@ public class PersonRepository {
 		
 		
 		RowMapper<PersonData> rowMapper = new PersonDataRowMapper();
-	
-		List<PersonData> pojoList = template.query(sql, args, argTypes, rowMapper);
 		
-									
+	
+		List<PersonData> pojoList = template.query(sql, args, argTypes, rowMapper);					
 		return pojoList.isEmpty() ? null : pojoList.get(0);
 	}
 	
@@ -612,7 +610,8 @@ public class PersonRepository {
 				String identityProvider = identityItem.get("identityProvider").asText();
 				if(identityProvider.isEmpty() || identifier.isEmpty()){
 					throw new Exception("Identifier cannot be Empty");
-				}				
+				}
+				
 				IdentifiedBy identity = new IdentifiedBy(identityProvider, identifier);			
 				identityList.add(identity);
 			}				
@@ -697,10 +696,6 @@ public class PersonRepository {
 		
 		
 	}
-	
-	
-
-	
 	
 	
 
@@ -800,7 +795,7 @@ public class PersonRepository {
 	}
 	
 	public JsonNode createAnnotatedJson(JsonNode simpleJsonNode, String datsourceId, String dateModified) throws IOException, IOException{
-		ObjectMapper mapper = new ObjectMapper();
+		ObjectMapper mapper = new ObjectMapper();		
 		JsonNode jsonNode= mapper.readTree(simpleJsonNode.toString());
 		Iterator<String> jsonNodeIterator = jsonNode.fieldNames();
 		ObjectMapper annotedMapper = new ObjectMapper();

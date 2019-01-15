@@ -168,7 +168,7 @@
 					<images>
 						<image>			
 							<alias>service</alias>
-							<name>privacy-personal-model</name>			
+							<name>deiddev</name>			
 							<build>			
 								<from>greyfoxit/alpine-openjdk8</from>
 								<entryPoint>
