@@ -36,7 +36,7 @@ public class Application  {
 	 @Bean
 	 public MemcachedClient memcachedCloudConfiguration() throws IOException {
 		 return new MemcachedClient(
-					new ConnectionFactoryBuilder().setDaemon(true).setFailureMode(FailureMode.Retry).build(),
+					new ConnectionFactoryBuilder().setDaemon(true).setFailureMode(FailureMode.Retry).setOpTimeout(5000).build(),
 					AddrUtil.getAddresses(env.getProperty("aws.memcache.endpoint")));
 	 }
 	
